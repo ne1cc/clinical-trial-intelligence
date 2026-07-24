@@ -220,6 +220,7 @@ organization test whether a feasibility-review process could justify its cost us
 | Document | Contents |
 |---|---|
 | [`PROJECT_DOCUMENTATION.md`](PROJECT_DOCUMENTATION.md) | complete project documentation with architecture, data-model, and flow diagrams |
+| [`docs/study_guide.md`](docs/study_guide.md) | guided learning path: run it, trace a record, read the code, exercises |
 | [`docs/architecture.md`](docs/architecture.md) | pipeline and layer design |
 | [`docs/data_dictionary.md`](docs/data_dictionary.md) | every layer, entity, and column |
 | [`docs/source_documentation.md`](docs/source_documentation.md) | API v2 usage, verification, history caveat |
