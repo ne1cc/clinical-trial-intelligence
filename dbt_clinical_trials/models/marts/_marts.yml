@@ -1,0 +1,149 @@
+version: 2
+
+models:
+  - name: dim_trial
+    description: One row per NCT ID (current record from latest snapshot).
+    columns:
+      - name: trial_key
+        tests: [not_null, unique]
+      - name: nct_id
+        tests: [not_null, unique]
+      - name: registry_url
+        description: Public ClinicalTrials.gov record URL derived from the NCT ID.
+        tests: [not_null]
+      - name: current_overall_status
+        tests: [not_null]
+
+  - name: dim_condition
+    columns:
+      - name: condition_key
+        tests: [not_null, unique]
+
+  - name: dim_sponsor
+    columns:
+      - name: sponsor_key
+        tests: [not_null, unique]
+
+  - name: dim_geography
+    columns:
+      - name: geography_key
+        tests: [not_null, unique]
+      - name: state_code
+        tests: [not_null, unique]
+
+  - name: dim_date
+    columns:
+      - name: date_day
+        tests: [not_null, unique]
+
+  - name: fct_trial_snapshot
+    description: One row per NCT ID per complete snapshot date.
+    columns:
+      - name: snapshot_key
+        tests: [not_null, unique]
+      - name: trial_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_trial')
+              field: trial_key
+      - name: nct_id
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+
+  - name: fct_trial_site
+    description: One row per trial x U.S. facility x snapshot date.
+    columns:
+      - name: trial_site_key
+        tests: [not_null, unique]
+      - name: trial_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_trial')
+              field: trial_key
+      - name: state_normalized
+        tests: [not_null]
+
+  - name: bridge_trial_condition
+    columns:
+      - name: trial_condition_key
+        tests: [not_null, unique]
+      - name: trial_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_trial')
+              field: trial_key
+      - name: condition_group
+        tests: [not_null]
+
+  - name: bridge_trial_sponsor
+    columns:
+      - name: trial_sponsor_key
+        tests: [not_null, unique]
+      - name: trial_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_trial')
+              field: trial_key
+
+  - name: mart_trial_activity
+    description: >
+      Segment activity per snapshot. Counts are registry listings,
+      not patient availability.
+    columns:
+      - name: trial_count
+        tests: [not_null]
+
+  - name: mart_recruiting_competition
+    description: >
+      Potential competition signal per recruiting segment. Not a
+      recruitment forecast.
+    columns:
+      - name: recruiting_trial_count
+        tests: [not_null]
+      - name: competition_signal_band
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['low', 'moderate', 'elevated']
+
+  - name: mart_site_overlap
+    columns:
+      - name: facility_normalized
+        tests: [not_null]
+      - name: listed_trial_count
+        tests: [not_null]
+
+  - name: mart_condition_geography_trends
+    columns:
+      - name: activity_month
+        tests: [not_null]
+      - name: condition_group
+        tests: [not_null]
+
+  - name: mart_data_reliability
+    description: One row per ingestion run with reconciliation shares.
+    columns:
+      - name: ingestion_run_id
+        tests: [not_null, unique]
+
+  - name: mart_feasibility_priority_queue
+    description: >
+      Ranked segments for human feasibility review. Triage signal from
+      public registry listings; not a recruitment forecast.
+    columns:
+      - name: priority_queue_key
+        tests: [not_null, unique]
+      - name: feasibility_review_priority_score
+        tests: [not_null]
+      - name: priority_band
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['watch', 'review', 'priority_review']
+      - name: priority_explanation
+        tests: [not_null]

@@ -1,0 +1,40 @@
+# Data (bronze/silver/gold artifacts and local warehouse are never committed)
+data/bronze/api_responses/*
+data/bronze/manifests/*
+data/silver/*
+data/gold/*
+data/warehouse/*.duckdb
+data/warehouse/*.duckdb.wal
+!data/**/.gitkeep
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# dbt
+dbt_clinical_trials/target/
+dbt_clinical_trials/dbt_packages/
+dbt_clinical_trials/logs/
+dbt_clinical_trials/profiles.yml
+logs/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+data/bronze/_schema_drift_*.json

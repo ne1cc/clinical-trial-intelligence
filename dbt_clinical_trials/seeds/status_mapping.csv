@@ -1,0 +1,15 @@
+overall_status,status_category,is_active,is_recruiting,display_name
+RECRUITING,open,true,true,Recruiting
+NOT_YET_RECRUITING,pre_open,true,false,Not yet recruiting
+ACTIVE_NOT_RECRUITING,active,true,false,Active not recruiting
+ENROLLING_BY_INVITATION,open,true,false,Enrolling by invitation
+COMPLETED,closed,false,false,Completed
+SUSPENDED,paused,false,false,Suspended
+TERMINATED,closed,false,false,Terminated
+WITHDRAWN,closed,false,false,Withdrawn
+AVAILABLE,expanded_access,false,false,Available (expanded access)
+NO_LONGER_AVAILABLE,expanded_access,false,false,No longer available
+TEMPORARILY_NOT_AVAILABLE,expanded_access,false,false,Temporarily not available
+APPROVED_FOR_MARKETING,expanded_access,false,false,Approved for marketing
+WITHHELD,unknown,false,false,Withheld
+UNKNOWN,unknown,false,false,Unknown

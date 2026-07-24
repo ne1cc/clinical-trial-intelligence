@@ -1,0 +1,45 @@
+name: clinical_trials
+version: "0.1.0"
+profile: clinical_trials
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+
+clean-targets:
+  - target
+  - dbt_packages
+
+# Priority-band thresholds over the 0..1 feasibility score.
+# Must stay in sync with config/score_weights.yml (tests/test_metrics.py).
+vars:
+  feasibility_band_review_threshold: 0.45
+  feasibility_band_priority_threshold: 0.70
+
+
+models:
+  clinical_trials:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  clinical_trials:
+    +schema: seeds
+    status_mapping:
+      +column_types:
+        is_active: boolean
+        is_recruiting: boolean
+    phase_mapping:
+      +column_types:
+        phase_order: integer
+    feasibility_score_weights:
+      +column_types:
+        weight: double

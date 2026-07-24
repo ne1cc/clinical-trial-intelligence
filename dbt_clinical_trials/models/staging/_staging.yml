@@ -1,0 +1,67 @@
+version: 2
+
+models:
+  - name: stg_trial_snapshots
+    description: One row per ingestion run (manifest summaries).
+    columns:
+      - name: ingestion_run_id
+        tests: [not_null, unique]
+      - name: status
+        tests:
+          - accepted_values:
+              values: [running, success, partial, failed]
+
+  - name: stg_trials
+    description: One row per NCT ID per ingestion run.
+    columns:
+      - name: nct_id
+        tests: [not_null]
+      - name: ingestion_run_id
+        tests: [not_null]
+      - name: source_json_hash
+        tests: [not_null]
+      - name: overall_status
+        tests:
+          - accepted_values:
+              values:
+                [RECRUITING, ACTIVE_NOT_RECRUITING, NOT_YET_RECRUITING, COMPLETED,
+                 ENROLLING_BY_INVITATION, SUSPENDED, TERMINATED, WITHDRAWN, UNKNOWN]
+              config:
+                severity: warn
+
+  - name: stg_trial_conditions
+    columns:
+      - name: nct_id
+        tests: [not_null]
+      - name: condition_group
+        tests: [not_null]
+      - name: mapping_confidence
+        tests:
+          - accepted_values:
+              values: [high, medium, low]
+
+  - name: stg_trial_sponsors
+    columns:
+      - name: nct_id
+        tests: [not_null]
+      - name: sponsor_role
+        tests:
+          - accepted_values:
+              values: [lead_sponsor, collaborator]
+
+  - name: stg_trial_locations
+    columns:
+      - name: nct_id
+        tests: [not_null]
+
+  - name: stg_trial_outcomes
+    columns:
+      - name: nct_id
+        tests: [not_null]
+      - name: outcome_type
+        tests:
+          - accepted_values:
+              values: [primary, secondary, other]
+
+  - name: stg_trial_contacts
+    description: Deliberately empty (privacy guardrail) — contacts are never extracted.

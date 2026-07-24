@@ -1,0 +1,453 @@
+# Development Log — Clinical Trial Access & Recruitment Competition Intelligence
+
+A chronological record of every step taken to build this project, including
+verification steps, live checks, fixes, and design decisions. Updated at the end
+of each phase.
+
+---
+
+## Phase 1 — Foundation (2026-07-24)
+
+1. **Created the repository tree** under `clinical-trial-intelligence/` with
+   `mkdir -p`: `data/{bronze/{api_responses,manifests},silver,gold,warehouse}`,
+   `config/`, `docs/`, `src/{ingest,transform,quality,utils}`,
+   `dbt_clinical_trials/{macros,seeds,models/{staging,intermediate,marts},tests}`,
+   `analyses/`, `dashboard/{components,pages}`, `tests/`, `.github/workflows/`.
+   Added `.gitkeep` files so git-ignored data directories survive cloning.
+2. **Wrote `pyproject.toml`** — uv-managed, Python ≥3.11, hatchling build with
+   `src` package. Runtime deps: httpx, tenacity, pydantic v2, pandas, pyarrow,
+   duckdb, python-dotenv, loguru, pyyaml, dbt-core, dbt-duckdb, streamlit,
+   plotly. Dev group: pytest, pytest-cov, respx (HTTP mocking), ruff.
+3. **Wrote `.gitignore`** — excludes all bronze/silver/gold data, the DuckDB
+   warehouse, `.env`, dbt `target/`/`profiles.yml`, Python caches.
+4. **Wrote `.env.example`** — paths, log level, optional HTTP overrides. No
+   secrets exist: the ClinicalTrials.gov API is public and unauthenticated.
+5. **Wrote `LICENSE`** — MIT plus a data-source notice (ClinicalTrials.gov terms;
+   portfolio demonstration, not clinical decision support).
+6. **Wrote `Makefile`** — single entry point: `setup`, `ingest`, `full-refresh`,
+   `transform`, `dbt-run`, `dbt-test`, `dbt-docs`, `quality-report`, `dashboard`,
+   `pipeline`, `test`, `lint`, `format`, `clean`, self-documenting `help`.
+7. **Verified API parameter syntax against the live API** (spec requirement
+   before coding). Findings:
+   - The docs page (`/data-api/api`) is JavaScript-rendered — not fetchable as text.
+   - The published OpenAPI YAML URL `…/api/oas/v2/ctg-oas-v2.yaml` returns **404**;
+     the working spec URL is `https://clinicaltrials.gov/api/oas/v2` (HTTP 200).
+   - Live `curl` test confirmed: `query.cond`, `filter.overallStatus`
+     (pipe-separated enums), `filter.advanced` with Essie expression
+     `AREA[StudyType]INTERVENTIONAL`, `pageSize`, `countTotal=true` — HTTP 200,
+     `totalCount: 2592` studies for the project scope.
+8. **Wrote `config/project_config.yml`** — every API query parameter lives here
+   (never hard-coded), plus HTTP retry/timeout settings, scope declaration,
+   paths, ingestion mode defaults, and the guardrail disclaimer.
+9. **Wrote `README.md`** — all 25 required sections (setup complete; later-phase
+   sections marked with their phase), Mermaid architecture + ER diagrams.
+10. **Wrote `docs/architecture.md`** — medallion layer contracts, ingestion
+    sequence diagram, snapshot-history design, technology rationale, scaling path.
+11. **Ran `uv lock`** — 99 packages resolved cleanly; `uv.lock` committed for
+    reproducibility.
+
+**Key decisions:** local-first (DuckDB + Parquet); bronze layer immutable;
+history is constructed from this project's own repeated snapshots because the
+API only serves current records.
+
+---
+
+## Phase 2 — API ingestion (2026-07-24)
+
+1. **Wrote `src/utils/`**:
+   - `paths.py` — project-root discovery (`CTI_PROJECT_ROOT` override), path
+     resolution, `ensure_dir`.
+   - `logging.py` — single loguru configuration, level from `CTI_LOG_LEVEL`.
+   - `dates.py` — timezone-aware UTC helpers (`utc_now`, compact run-ID stamp).
+   - `hashing.py` — SHA-256 of text and canonical JSON (stable key order).
+2. **Wrote `src/config.py`** — pydantic-typed loader for `project_config.yml`
+   (`ApiConfig`, `HttpConfig`, `PathsConfig`, `IngestionConfig`) with `.env`
+   overrides for timeout/retries; `lru_cache`d `get_config()`.
+3. **Wrote `src/ingest/retry_policy.py`** — tenacity `Retrying` with exponential
+   backoff, retry on 429/500/502/503/504 (`RetryableHTTPStatusError`), timeouts,
+   and transport errors; warning log before each sleep; `reraise=True`.
+4. **Wrote `src/ingest/ctg_client.py`** — httpx client with timeout and
+   User-Agent; `build_params()` renders config params (list filters joined with
+   `|` per v2 syntax; `--condition` overrides `query.cond`); `fetch_page()`
+   returns parsed payload **and** unmodified response text (bronze saves the
+   exact bytes); context-manager support.
+5. **Wrote `src/ingest/pagination.py`** — generator following `nextPageToken`
+   until absent; optional `max_pages` cap for smoke tests.
+6. **Wrote `src/ingest/validate_api_payload.py`** — pydantic envelope validation
+   (`studies`, `nextPageToken`, `totalCount`); per-record screening producing
+   quarantine records with reason codes (`NOT_AN_OBJECT`, `MISSING_NCT_ID`,
+   `INVALID_NCT_ID_FORMAT` vs `^NCT\d{8}$`); quarantine report writer. Nothing
+   is silently dropped.
+7. **Wrote `src/ingest/snapshot_manifest.py`** — `IngestionManifest` model
+   (run ID, query hash, endpoint, params, timings, page/record counts,
+   `totalCount` reported, quarantine count, status, error); run IDs =
+   UTC timestamp + UUID fragment; JSON manifest + one-row Parquet/CSV summary;
+   `find_reusable_run()` implements incremental mode (skip re-download of a
+   successful identical query within `reuse_window_hours`).
+8. **Wrote `src/ingest/extract_studies.py`** — orchestrator: build params →
+   query hash → incremental reuse check → create `run_id=<id>` directory →
+   save each raw page as `page=NNNNN.json` → validate envelope → screen records
+   → write manifest/summary/quarantine in a `finally` block (failure states are
+   recorded, not lost).
+9. **Refinement:** runs stopped by `--max-pages` while the API still had a
+   `nextPageToken` are marked **`partial`** (not `success`) so they are never
+   reused by incremental mode and never feed downstream metrics.
+10. **Wrote `src/cli.py`** — `python -m src.cli ingest --condition … [--full-refresh]
+    [--max-pages N]`; nonzero exit on failure.
+11. **Wrote unit tests** (all HTTP mocked with respx; no network):
+    - `tests/test_ctg_client.py` — param rendering (pipe-joined statuses,
+      paging params), condition override, success path, retry-then-succeed on
+      503, no retry on 400, retries exhausted raises after 3 attempts.
+    - `tests/test_pagination.py` — follows `nextPageToken`, `max_pages` cap,
+      single-page stop.
+    - `tests/test_snapshot_manifest.py` — run-ID shape/uniqueness, manifest
+      round-trip, reuse-window logic (ignores other-hash/failed/partial/stale),
+      most-recent-wins, Parquet/CSV summary contents.
+12. **Wrote `.github/workflows/ci.yml`** — uv setup → `ruff check` → `pytest`.
+13. **Fixed 4 ruff findings** (two long lines, `datetime.UTC` alias, import
+    order). Result: lint clean, **15/15 tests passing**.
+14. **Live smoke test:** `python -m src.cli ingest --condition "Alzheimer Disease"
+    --max-pages 2` → run `20260724T203236Z_cade2517`, 2 pages / 200 studies
+    saved, 0 quarantined, `totalCount` 2,592, status correctly `partial`,
+    manifest verified on disk.
+
+---
+
+## Phase 3 — Bronze-to-Silver transformation (in progress)
+
+1. **Inspected real bronze JSON** to ground the flattening code in actual field
+   names (not assumptions). Confirmed structure:
+   - Top level: `protocolSection`, `resultsSection`, `derivedSection`, `hasResults`.
+   - `statusModule`: `overallStatus`, `statusVerifiedDate`, `expandedAccessInfo.
+     hasExpandedAccess`, `startDateStruct`, `primaryCompletionDateStruct`,
+     `completionDateStruct`, `studyFirstPostDateStruct`,
+     `resultsFirstPostDateStruct`, `lastUpdatePostDateStruct` (dates may be
+     partial, e.g. `"2009-11"`).
+   - `designModule`: `studyType`, `phases` (list), `enrollmentInfo{count,type}`.
+   - `sponsorCollaboratorsModule`: `leadSponsor{name,class}`, `collaborators`,
+     `responsibleParty{type}`.
+   - `eligibilityModule`: `eligibilityCriteria`, `healthyVolunteers`, `sex`,
+     `minimumAge`/`maximumAge`, `stdAges`.
+   - `contactsLocationsModule.locations[]`: `facility`, `city`, `state`, `zip`,
+     `country`, `geoPoint{lat,lon}`, optional `status`. Location contacts are
+     deliberately **not** extracted (privacy guardrail).
+   - `outcomesModule`: `primaryOutcomes`/`secondaryOutcomes` (+`otherOutcomes`)
+     with `measure`, `description`, `timeFrame`.
+2. **Wrote `config/condition_taxonomy.yml`** — deterministic, ordered ADRD
+   taxonomy (alzheimers_disease, mild_cognitive_impairment, lewy_body_dementia,
+   frontotemporal_dementia, vascular_dementia, parkinsons_disease_dementia,
+   dementia_unspecified catch-all, cognitive_impairment_other, default
+   non_dementia_other). First match wins; exact → high confidence, substring →
+   medium, fallback → low. No runtime LLM classification.
+3. **Wrote `config/geography_rules.yml`** — U.S. country aliases, valid state
+   abbreviations (50 + DC + territories), full-name→abbreviation map, UNKNOWN
+   sentinel. Non-U.S. records preserved and flagged, never dropped.
+4. **Added `src/utils/text.py`** (`normalize_text`: lowercase, apostrophes
+   removed, punctuation→spaces, whitespace collapsed) and
+   `parse_partial_date` in `src/utils/dates.py` (handles YYYY / YYYY-MM /
+   YYYY-MM-DD registry dates).
+5. **Wrote `src/transform/normalize_conditions.py`** — YAML-driven
+   `ConditionTaxonomy.map_condition()` returning normalized text, group,
+   dementia-relevance flag, and mapping confidence.
+6. **Wrote `src/transform/normalize_locations.py`** — YAML-driven state
+   normalization, U.S. flags, `usable_geography_flag`, `geo_scope`
+   (facility/city/state/country/unknown). No geocoding in MVP.
+7. **Wrote `src/transform/flatten_studies.py`** — one study → rows for all six
+   silver entities; per-study `source_json_hash`; phase normalization
+   (multi-phase joined `PHASE1/PHASE2`, `NA` → `NOT_APPLICABLE`, missing →
+   `UNKNOWN`); `record_quality_flag` codes (missing status/type,
+   start_after_completion, results_before_first_post, negative_enrollment).
+   Location contacts/investigators deliberately never extracted.
+8. **Wrote `src/transform/export_parquet.py`** — per-entity per-run Parquet:
+   `data/silver/<entity>/run_id=<id>.parquet`.
+9. **Wrote `src/transform/build_silver_entities.py`** — processes
+   status=`success` runs only by default (partial/failed excluded from silver);
+   skips already-transformed runs unless `--force`; dedupes repeated NCT IDs
+   within a run (kept-first, logged); reconciles silver row count against the
+   manifest.
+10. **Wrote `src/quality/profiling.py`** — per-entity row counts, null rates,
+    distinct NCT IDs, manifest reconciliation; JSON report at
+    `data/silver/_profiles/profile_<run_id>.json`.
+11. **Extended `src/cli.py`** — `transform` subcommand (`--run-id`, `--force`),
+    auto-profiles every processed run.
+12. **Wrote `tests/test_normalization.py`** — 13 tests: text/date helpers,
+    taxonomy ordering (specific groups beat the dementia catch-all), default
+    low-confidence fallback, state normalization, non-U.S. flagging, phase
+    normalization, quality flags, and a full fixture-study flatten across all
+    six entities. Fixed 4 ruff long-line findings via `ruff format`.
+    **Result: 28/28 tests passing, lint clean.**
+13. **Live verification on real data:**
+    - Full ingest: run `20260724T203950Z_46dc682b`, 26 pages, **2,592 studies**
+      (matches API `totalCount`), 0 quarantined, status `success`.
+    - Transform: silver_trials 2,592 · conditions 5,289 · interventions 4,898 ·
+      sponsors 4,642 · locations 25,819 · outcomes 19,907 rows.
+    - Reconciliation: counts match manifest; NCT IDs unique; all quality flags `ok`.
+    - Sanity signals: phases mix led by NOT_APPLICABLE/PHASE2/PHASE1; condition
+      groups led by alzheimers_disease (2,318 rows); 12,419 usable U.S.
+      locations (top states FL, CA, NY, TX, AZ).
+
+**Key decisions:** partial/failed runs can never reach silver by default;
+duplicates and missing-NCT records are counted and logged, not silently
+dropped; all mapping logic lives in version-controlled YAML.
+
+
+---
+
+## Phase 4 — dbt Warehouse: Staging, Intermediate, Marts (2026-07-24)
+
+1. **Scaffolded the dbt project** — `dbt_clinical_trials/dbt_project.yml`
+   (staging/intermediate as views, marts as tables, custom schemas per layer)
+   and `profiles.yml.example` (DuckDB at `data/warehouse/clinical_trials.duckdb`).
+   dbt is always invoked from the repo root via
+   `--project-dir/--profiles-dir dbt_clinical_trials` so the relative Parquet
+   paths in sources resolve consistently (same convention as the Makefile).
+2. **Wrote 4 macros** — `safe_divide` (null on zero denominator),
+   `generate_surrogate_key` (md5 of `||`-joined coalesced parts),
+   `normalize_text` (SQL mirror of the Python normalizer),
+   `parse_partial_date` (coalesced `try_strptime` for YYYY / YYYY-MM /
+   YYYY-MM-DD registry dates).
+3. **Wrote 3 seeds** — `status_mapping` (14 statuses), `phase_mapping`
+   (ordering + MVP scope), `feasibility_score_weights` (5 components summing
+   to 1.0, consumed in Phase 5).
+4. **Defined sources** (`_sources.yml`) — silver Parquet via
+   `external_location: read_parquet('data/silver/<entity>/*.parquet',
+   union_by_name=true)`; bronze manifests from `summary_*.parquet`.
+5. **Wrote 8 staging models** — snapshots, trials (partial-date parsing with
+   `*_raw` preserved), conditions, interventions, sponsors, locations,
+   outcomes, and **`stg_trial_contacts` as a deliberately empty model**
+   (`where 1 = 0`) so the privacy guardrail is enforced structurally.
+6. **Wrote 7 intermediate models** — status history from complete snapshots
+   only (QUALIFY dedupe, named window for previous-status / entered- /
+   left-recruiting flags), current status, condition mapping, geography
+   (usable U.S. rows), site activity, condition-geography activity (single
+   shared grain feeding all geography marts), sponsor concentration
+   (top share + HHI via `safe_divide` + `power`).
+7. **Wrote 12 mart models** — `dim_trial`, `dim_condition`, `dim_sponsor`,
+   `dim_geography` (state grain), `dim_date` (1999 → +3y spine);
+   `fct_trial_snapshot` (snapshot grain, `record_hash`,
+   `current_record_flag`, condition/site counts); `fct_trial_site`
+   (trial × facility × snapshot); `bridge_trial_condition` /
+   `bridge_trial_sponsor` (current-snapshot grain, surrogate keys);
+   `mart_trial_activity`; `mart_recruiting_competition` (density proxy =
+   recruiting listing count, 30/90-day transition windows via
+   `RANGE BETWEEN INTERVAL ... PRECEDING`, `newly_posted_90d_proxy` from
+   registry first-post date, sponsor concentration join, and
+   `competition_signal_band` from `percent_rank` — <0.5 low, <0.8 moderate,
+   else elevated); `mart_site_overlap` (facility grain, phase mix via
+   `string_agg`, `repeated_site_participation_flag`, no "overloaded"
+   language); `mart_condition_geography_trends` (monthly, 3-month rolling
+   baseline); `mart_data_reliability` (run-level reconciliation +
+   missing-data shares).
+8. **Wrote schema tests** (`_staging.yml`, `_marts.yml`) — not_null / unique /
+   accepted_values / relationships across keys and grains — plus **5 singular
+   tests**: `assert_valid_study_dates` (warn), 
+   `assert_one_current_record_per_trial`,
+   `assert_trial_site_relationship_integrity`, `assert_valid_us_state`,
+   `assert_snapshot_completeness` (warn).
+9. **Errors found and fixed during live runs:**
+   - `dim_trial` Binder Error: ambiguous `nct_id` in the surrogate key after
+     the join → qualified to `c.nct_id`.
+   - `bridge_trial_sponsor` used `'LEAD_SPONSOR'` but silver stores
+     `'lead_sponsor'` → fixed casing.
+   - `_marts.yml` referenced `state_normalized` on `dim_geography`, which
+     exposes it as `state_code` → fixed column name.
+   - `not_null_mart_site_overlap_facility_normalized` failed with 266 rows:
+     real listings with no facility name. Decision: exclude them from the
+     overlap mart only (identity required for overlap), keep them upstream.
+10. **Live verification** (`dbt build`): **97/97 passing** — 29 models,
+    3 seeds, 65 tests, 0 warnings. Row counts: dim_trial 2,592 (= ingest),
+    fct_trial_snapshot 2,592, fct_trial_site 12,244, bridges 4,037 / 4,642,
+    mart_recruiting_competition 449 segments (230 low / 140 moderate /
+    79 elevated), mart_site_overlap 6,241 facilities (top overlap:
+    Massachusetts General Hospital, 7 recruiting trials), reliability mart
+    reconciled=true, unique NCT=true for the success run; the earlier
+    partial run is visible but carries no silver-derived metrics.
+
+**Key decisions:** all snapshot-transition metrics honestly report 0/null
+until multi-snapshot history accrues (registry first-post date is a labeled
+proxy, not a substitute); the empty contacts model makes the privacy rule a
+build-time artifact; partial runs surface in the reliability mart but never
+feed analytical marts.
+
+---
+
+## Phase 5 — Feasibility Score, Scenarios, and Quality Framework (2026-07-24)
+
+1. **Wrote `config/score_weights.yml`** — Python/dashboard-side mirror of the
+   `feasibility_score_weights` dbt seed (weights sum to 1.0), min-max
+   normalization rule, priority-band thresholds (review ≥ 0.45,
+   priority_review ≥ 0.70), and data-confidence sub-weights (0.5 record
+   quality + 0.5 location usability). Band thresholds are also declared as
+   dbt `vars` in `dbt_project.yml`; `tests/test_metrics.py` enforces that
+   YAML, seed CSV, and dbt vars never diverge.
+2. **Wrote `mart_feasibility_priority_queue.sql`** — grain: condition_group ×
+   state × phase at the latest complete snapshot. Components (each min-max
+   normalized to 0..1, degenerate spread → 0): recruiting listing density,
+   recent recruiting growth (snapshot transitions once history accrues;
+   until then the registry first-post-date proxy, exposed via
+   `growth_uses_registry_proxy_flag`), sponsor HHI, share of trials listing
+   a multi-trial facility, and a data-confidence adjustment. Weights are
+   read from the seed at build time; deterministic `priority_explanation`
+   is assembled from fixed component phrases and every row carries an
+   `interpretation_note` ("not a recruitment forecast; requires human
+   feasibility review").
+3. **Added tests for the queue** — schema tests (unique key, not-null score/
+   explanation, accepted band values) plus singular
+   `assert_feasibility_score_within_bounds` ([0, 1]).
+4. **Wrote `config/roi_assumptions.yml` + `src/analysis/roi_scenarios.py`** —
+   scenario calculator that only multiplies user-editable assumptions
+   (conservative/base/optimistic multipliers); pydantic-validated, every
+   output carries the "illustrative, not observed outcomes" disclaimer;
+   `render_markdown` for the Phase 7 memo and Phase 6 dashboard.
+5. **Wrote 4 dbt analyses** — top priority segments, sponsor landscape,
+   site-overlap hotspots, data-reliability trend (all `ref`-based).
+6. **Wrote `src/quality/schema_drift.py`** — records observed bronze field
+   paths (depth 3) per run; first run creates
+   `data/bronze/_schema_baseline.json`; later runs produce drift reports
+   with added/removed paths; baseline updates only by explicit
+   `--update-schema-baseline`.
+7. **Wrote `src/quality/reconciliation.py`** — cross-layer checks per
+   success run (manifest vs silver rows, NCT uniqueness) plus warehouse
+   checks (dim_trial vs latest silver, current-record cap).
+8. **Wrote `src/quality/data_quality_report.py` + CLI `quality-report`** —
+   Markdown report (`reports/data_quality_report.md`) combining the
+   reliability mart, reconciliation results, schema-drift status, and the
+   interpretation guardrails; wired to the existing `make quality-report`.
+9. **Wrote `tests/test_metrics.py`** — 10 tests: weight sums, YAML↔seed↔dbt
+   var consistency, score boundedness (via in-memory DuckDB), degenerate
+   normalization → 0, HHI math (0.375 fixture / 1.0 solo), ROI arithmetic
+   and disclaimer propagation. One fix: DuckDB returns `Decimal` from
+   VALUES literals → cast to float in the test.
+10. **Live verification:** priority queue = 449 segments (75 review /
+    374 watch, none ≥ 0.70 yet — expected with single-snapshot history);
+    top segment alzheimers_disease × FL × PHASE3 (score 0.6263). Full
+    `dbt build`: **105/105 passing.** Pytest: **38/38.** Ruff clean.
+    `quality-report` run live: 4/4 reconciliation checks passed, schema
+    baseline created (125 field paths), report written.
+
+**Key decisions:** score inputs and thresholds live in three synchronized,
+version-controlled places (YAML for Python, seed for SQL, vars for banding)
+with a test that fails on divergence; the growth component openly labels
+its proxy source instead of pretending transition history exists; ROI
+figures can never be presented without their disclaimer because it is
+embedded in every result object.
+
+---
+
+## Phase 6 — Streamlit Dashboard (2026-07-24)
+
+1. **Shared components** (`dashboard/components/`):
+   - `data.py` — read-only cached DuckDB access (`st.cache_resource`
+     connection + `st.cache_data` queries); `require_warehouse()` stops
+     pages with build instructions when the warehouse is missing; one
+     query helper per page.
+   - `guardrails.py` — `page_setup()` renders the mandatory disclaimer
+     banner ("potential competition signals … **not** recruitment
+     forecasts, patient availability, site capacity, or trial outcomes")
+     on every page, plus the snapshot-proxy note and a guarded footer.
+   - `filters.py` — reusable condition/state/phase sidebar multiselects.
+2. **Six pages + overview**:
+   - `app.py` (Overview) — headline metrics, top-10 queue preview,
+     "how to read this dashboard".
+   - `1_Priority_Queue.py` — full ranked queue, band metrics, proxy
+     warning when growth uses the registry-date fallback, horizontal
+     stacked bar of normalized (unweighted) score components.
+   - `2_Competition_Landscape.py` — density vs sponsor-HHI scatter
+     (bubble = listed sites, color = signal band) + segment table.
+   - `3_Geography_Trends.py` — USA choropleth per condition group, top
+     states, monthly trend line (or an honest "needs more snapshots" note
+     with the accrued count).
+   - `4_Site_Overlap.py` — multi-trial facility table, states ranked by
+     multi-trial facilities, explicit "not workload/performance" caption.
+   - `5_Sponsor_Landscape.py` — top lead sponsors by recruiting listings,
+     colored by sponsor class; "not market share" caption.
+   - `6_Data_Reliability.py` — run reliability table, latest-run metrics,
+     known limitations, and the assumption-driven scenario explorer
+     (sliders adjust session-only copies of `roi_assumptions.yml`; the
+     disclaimer always renders above results).
+3. **Live verification:**
+   - `streamlit run dashboard/app.py` served HTTP 200 headless.
+   - Every page executed via Streamlit's `AppTest` harness — 7/7 clean.
+   - Debugging notes: a first combined AppTest run segfaulted while the
+     dev server still held the DuckDB file — re-ran after stopping the
+     server and all pages passed (kept pages tested without a live
+     server as the standard procedure). Also learned this session's
+     shell wrapper embeds command text in its own cmdline, so
+     `pkill -f <pattern>` self-terminates; killed by exact port marker
+     instead.
+4. **Added `tests/test_dashboard_smoke.py`** — parametrized AppTest run of
+   all 7 scripts (auto-skips when no warehouse, e.g. CI) plus a static
+   check that every page calls `page_setup` (guardrail banner). Suite now
+   **46/46 passing**, ruff clean.
+
+**Key decisions:** the dashboard is read-only against the warehouse
+(connection opened `read_only=True`); every page carries the disclaimer
+via one shared function so no view can ship without it; scenario sliders
+never write back to the assumptions file.
+
+---
+
+## Phase 7 — Documentation, executive memo & career materials
+
+**Goal:** finish the documentation set, replace every README placeholder
+with measured values, and produce the executive memo template plus
+resume/interview materials — all grounded in the live 2026-07-24 build.
+
+### Step 7.1 — Core documentation set (`docs/`)
+
+Wrote eight documents, each using only numbers queried from the live
+warehouse and guarded interpretation language:
+
+- `data_dictionary.md` — every silver/gold object, column, grain.
+- `source_documentation.md` — API v2 endpoint, parameters, pagination,
+  snapshot-history rationale.
+- `metric_definitions.md` — formal definition, denominator, and
+  guardrail note for every metric (trial counts always
+  `COUNT(DISTINCT nct_id)`).
+- `clinical_interpretation_guardrails.md` — prohibited claims and the
+  required "potential competition signal … not a recruitment forecast"
+  framing.
+- `assumptions_and_limitations.md` — registry lag, facility-name
+  instability, no population adjustment, single-snapshot history.
+- `data_quality_framework.md` — quarantine reason codes, manifest
+  reconciliation, schema-drift baselines, dbt test inventory.
+- `dashboard_spec.md` — page-by-page spec incl. the enforced
+  `page_setup` guardrail banner.
+- `executive_memo_template.md` — bracketed template with italic live
+  example figures (2,592 trials; 419 recruiting; 449 segments; 75 in
+  review band; 0 in priority band on single-snapshot history).
+
+### Step 7.2 — README completion
+
+- Section 17 now links `docs/metric_definitions.md`.
+- Section 19 cites the tested reality: **72 dbt data tests + 46 pytest
+  tests** with links to the framework and guardrail docs.
+- Section 22's screenshot placeholders became a 10-row documentation
+  index table.
+- Section 24 resume bullets use measured values: 2,592 versioned trial
+  records, 29 tested dbt models, 419 recruiting trials across 50 states,
+  6,241 normalized facilities, 449 ranked segments.
+- Section 25 lists 8 numbered interview talking points.
+- Removed all leftover `*(Phase N)*` markers from section headers now
+  that every phase is complete.
+
+### Step 7.3 — Final verification (all green)
+
+| Check | Result |
+|---|---|
+| `uv run pytest -q` | 46/46 passed |
+| `uv run ruff check src tests dashboard` | clean |
+| `dbt build` (root, `--project-dir`/`--profiles-dir`) | 105/105 PASS — 3 seeds, 15 tables, 15 views, 72 data tests |
+
+One accuracy fix during verification: earlier docs said "66 dbt data
+tests"; the actual built count is **72** — corrected in README §19/§25
+and `data_quality_framework.md`.
+
+**Key decisions:** documentation numbers are never typed from memory —
+each figure was queried from the warehouse immediately before writing;
+the memo is a *template* whose example values are explicitly labeled as
+one build's output, not standing findings.
+
+**Project complete.** All seven phases delivered and verified: ingestion
+(bronze), normalization (silver), dbt marts + tests (gold), quality
+framework, dashboard, and documentation.

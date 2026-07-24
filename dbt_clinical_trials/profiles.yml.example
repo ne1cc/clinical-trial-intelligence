@@ -1,0 +1,10 @@
+# Copy to profiles.yml (make setup does this automatically).
+# Paths are relative to the process working directory — run dbt from the
+# repository root (the Makefile does this for you).
+clinical_trials:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: data/warehouse/clinical_trials.duckdb
+      threads: 4

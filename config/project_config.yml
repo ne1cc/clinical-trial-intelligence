@@ -1,0 +1,86 @@
+# ============================================================
+# Clinical Trial Access & Recruitment Competition Intelligence
+# Central runtime configuration. All API query parameters live
+# here — never hard-coded in Python.
+#
+# Parameter syntax verified against the live ClinicalTrials.gov
+# API v2 (GET /api/v2/studies) on 2026-07-24:
+#   - query.cond          : condition query ("Alzheimer Disease")
+#   - filter.overallStatus: pipe-separated status enums
+#   - filter.advanced     : Essie expression, e.g. AREA[StudyType]INTERVENTIONAL
+#   - pageSize / pageToken: pagination (follow nextPageToken until absent)
+#   - countTotal          : include totalCount on the first page
+# OpenAPI spec: https://clinicaltrials.gov/api/oas/v2
+# ============================================================
+
+project:
+  name: clinical-trial-intelligence
+  description: >-
+    Public-registry-based feasibility prioritization for clinical operations.
+    Signals only — not a recruitment forecast and not clinical decision support.
+  timezone: UTC
+
+api:
+  base_url: https://clinicaltrials.gov/api/v2
+  studies_endpoint: /studies
+  openapi_spec_url: https://clinicaltrials.gov/api/oas/v2
+  docs_url: https://clinicaltrials.gov/data-api/api
+  format: json
+  page_size: 100            # API max is 1000; 100 keeps bronze pages reviewable
+  count_total: true
+  # Query parameters sent verbatim (values below are joined/encoded by the client)
+  query_params:
+    query.cond: "Alzheimer Disease"
+    filter.advanced: "AREA[StudyType]INTERVENTIONAL"
+    filter.overallStatus:      # joined with "|" at request time
+      - RECRUITING
+      - ACTIVE_NOT_RECRUITING
+      - NOT_YET_RECRUITING
+      - COMPLETED
+  http:
+    timeout_seconds: 30
+    max_retries: 5
+    backoff_initial_seconds: 1
+    backoff_max_seconds: 60
+    retry_on_status: [429, 500, 502, 503, 504]
+
+scope:
+  therapeutic_area: "Alzheimer's disease and related dementias"
+  geography: "United States"          # analysis scope; all raw records preserved
+  study_type: INTERVENTIONAL
+  statuses:
+    - RECRUITING
+    - ACTIVE_NOT_RECRUITING
+    - NOT_YET_RECRUITING
+    - COMPLETED
+  phases:                             # normalized in silver; source may omit phase
+    - EARLY_PHASE1
+    - PHASE1
+    - PHASE2
+    - PHASE3
+    - PHASE4
+  refresh_cadence: weekly
+  history_note: >-
+    ClinicalTrials.gov returns only the current record per study. Longitudinal
+    status history is constructed by this project from repeated weekly snapshots.
+
+paths:
+  bronze_api_responses: data/bronze/api_responses
+  bronze_manifests: data/bronze/manifests
+  silver: data/silver
+  gold: data/gold
+  duckdb: data/warehouse/clinical_trials.duckdb
+  quarantine: data/bronze/manifests/quarantine
+
+ingestion:
+  mode_default: incremental           # skip re-download when a completed run
+  # for the same query hash exists within reuse_window_hours
+  reuse_window_hours: 24
+  page_file_pattern: "run_id={run_id}/page={page:05d}.json"
+  manifest_file_pattern: "manifest_{run_id}.json"
+
+guardrails:
+  disclaimer: >-
+    Public-registry-based planning signals for analytical portfolio
+    demonstration only. Not a recruitment forecast, not clinical decision
+    support, and not an assessment of site, sponsor, or population quality.

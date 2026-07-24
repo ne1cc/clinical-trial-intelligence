@@ -1,0 +1,65 @@
+"""HTTP client for GET /api/v2/studies on ClinicalTrials.gov.
+
+All query parameters come from config; list-valued filters (e.g.
+filter.overallStatus) are joined with '|' per the v2 API syntax.
+"""
+
+from typing import Any
+
+import httpx
+
+from src.config import ApiConfig
+from src.ingest.retry_policy import RetryableHTTPStatusError, build_retryer
+
+USER_AGENT = "clinical-trial-intelligence/0.1 (local-first analytics portfolio)"
+
+
+class CTGClient:
+    def __init__(self, api_config: ApiConfig, client: httpx.Client | None = None):
+        self.api = api_config
+        self._url = api_config.studies_url
+        self._http = api_config.http
+        self._client = client or httpx.Client(
+            timeout=api_config.http.timeout_seconds,
+            headers={"Accept": "application/json", "User-Agent": USER_AGENT},
+        )
+        self._retryer = build_retryer(api_config.http)
+
+    def build_params(self, condition: str | None = None) -> dict[str, str]:
+        params: dict[str, str] = {}
+        for key, value in self.api.query_params.items():
+            params[key] = "|".join(str(v) for v in value) if isinstance(value, list) else str(value)
+        if condition:
+            params["query.cond"] = condition
+        params["format"] = self.api.format
+        params["pageSize"] = str(self.api.page_size)
+        if self.api.count_total:
+            params["countTotal"] = "true"
+        return params
+
+    def fetch_page(
+        self, params: dict[str, str], page_token: str | None = None
+    ) -> tuple[dict[str, Any], str]:
+        """Fetch one page; returns (parsed payload, unmodified response text)."""
+        query = dict(params)
+        if page_token:
+            query["pageToken"] = page_token
+
+        def _request() -> httpx.Response:
+            response = self._client.get(self._url, params=query)
+            if response.status_code in self._http.retry_on_status:
+                raise RetryableHTTPStatusError(response.status_code, self._url)
+            response.raise_for_status()
+            return response
+
+        response = self._retryer(_request)
+        return response.json(), response.text
+
+    def close(self) -> None:
+        self._client.close()
+
+    def __enter__(self) -> "CTGClient":
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        self.close()

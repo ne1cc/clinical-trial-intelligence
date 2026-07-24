@@ -1,0 +1,84 @@
+# ============================================================
+# Geography normalization rules (U.S.-scope MVP).
+# - Non-U.S. records are preserved in silver but flagged unusable for the
+#   U.S.-only analysis marts.
+# - State values are normalized to two-character abbreviations only when the
+#   mapping is unambiguous; otherwise UNKNOWN.
+# - No facility geocoding in MVP; geoPoint lat/lon are passed through as-is.
+# ============================================================
+
+version: 1
+
+unknown_value: UNKNOWN
+
+us_country_values:
+  - United States
+  - United States of America
+  - USA
+  - U.S.
+  - US
+
+valid_state_abbreviations:
+  [AL, AK, AZ, AR, CA, CO, CT, DE, FL, GA, HI, ID, IL, IN, IA, KS, KY, LA,
+   ME, MD, MA, MI, MN, MS, MO, MT, NE, NV, NH, NJ, NM, NY, NC, ND, OH, OK,
+   OR, PA, RI, SC, SD, TN, TX, UT, VT, VA, WA, WV, WI, WY,
+   DC, PR, GU, VI, AS, MP]
+
+state_name_to_abbreviation:
+  alabama: AL
+  alaska: AK
+  arizona: AZ
+  arkansas: AR
+  california: CA
+  colorado: CO
+  connecticut: CT
+  delaware: DE
+  florida: FL
+  georgia: GA
+  hawaii: HI
+  idaho: ID
+  illinois: IL
+  indiana: IN
+  iowa: IA
+  kansas: KS
+  kentucky: KY
+  louisiana: LA
+  maine: ME
+  maryland: MD
+  massachusetts: MA
+  michigan: MI
+  minnesota: MN
+  mississippi: MS
+  missouri: MO
+  montana: MT
+  nebraska: NE
+  nevada: NV
+  new hampshire: NH
+  new jersey: NJ
+  new mexico: NM
+  new york: NY
+  north carolina: NC
+  north dakota: ND
+  ohio: OH
+  oklahoma: OK
+  oregon: OR
+  pennsylvania: PA
+  rhode island: RI
+  south carolina: SC
+  south dakota: SD
+  tennessee: TN
+  texas: TX
+  utah: UT
+  vermont: VT
+  virginia: VA
+  washington: WA
+  west virginia: WV
+  wisconsin: WI
+  wyoming: WY
+  district of columbia: DC
+  puerto rico: PR
+  guam: GU
+  virgin islands: VI
+  us virgin islands: VI
+  american samoa: AS
+  northern mariana islands: MP

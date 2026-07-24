@@ -1,0 +1,10 @@
+phase_normalized,phase_display,phase_order,in_mvp_scope
+EARLY_PHASE1,Early Phase 1,1,true
+PHASE1,Phase 1,2,true
+PHASE1/PHASE2,Phase 1/2,3,true
+PHASE2,Phase 2,4,true
+PHASE2/PHASE3,Phase 2/3,5,true
+PHASE3,Phase 3,6,true
+PHASE4,Phase 4,7,true
+NOT_APPLICABLE,Not Applicable,8,false
+UNKNOWN,Unknown,9,false
