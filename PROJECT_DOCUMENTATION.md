@@ -116,10 +116,10 @@ never an automated verdict.
 
 ```mermaid
 flowchart LR
-    A[Public registry\nlistings] --> B[Transparent\nweighted signals]
-    B --> C[Ranked priority queue\n449 segments]
-    C --> D{{Human feasibility\nreview + outreach}}
-    D --> E[Site activation\ndecision]
+    A[Public registry<br/>listings] --> B[Transparent<br/>weighted signals]
+    B --> C[Ranked priority queue<br/>449 segments]
+    C --> D{{Human feasibility<br/>review + outreach}}
+    D --> E[Site activation<br/>decision]
     style D stroke-dasharray: 5 5
 ```
 
@@ -133,34 +133,34 @@ require qualified clinical-operations judgment and primary feasibility outreach.
 ```mermaid
 flowchart TB
     subgraph SRC["Source (public)"]
-        CTG["ClinicalTrials.gov API v2\nGET /api/v2/studies\npageSize + pageToken pagination"]
+        CTG["ClinicalTrials.gov API v2<br/>GET /api/v2/studies<br/>pageSize + pageToken pagination"]
     end
 
     subgraph BRONZE["Bronze — immutable raw"]
-        RAW["Raw JSON pages\ndata/bronze/api_responses/run_id=&lt;id&gt;/page=NNNNN.json"]
-        MAN["Ingestion manifests\ndata/bronze/manifests/manifest_&lt;run_id&gt;.json"]
-        BASE["Schema baseline\n_schema_baseline.json (125 field paths)"]
+        RAW["Raw JSON pages<br/>data/bronze/api_responses/run_id=&lt;id&gt;/page=NNNNN.json"]
+        MAN["Ingestion manifests<br/>data/bronze/manifests/manifest_&lt;run_id&gt;.json"]
+        BASE["Schema baseline<br/>_schema_baseline.json (125 field paths)"]
     end
 
     subgraph SILVER["Silver — normalized entities"]
-        PQ["7 Parquet entity sets per run\ntrials · locations · sponsors · conditions\ninterventions · outcomes · statuses"]
-        QUAR["Quarantine\nrejected records + reason codes"]
+        PQ["7 Parquet entity sets per run<br/>trials · locations · sponsors · conditions<br/>interventions · outcomes · statuses"]
+        QUAR["Quarantine<br/>rejected records + reason codes"]
     end
 
     subgraph GOLD["Gold — dimensional warehouse"]
-        DUCK[("DuckDB\ndata/warehouse/clinical_trials.duckdb")]
-        DBT["dbt: 8 staging + 7 intermediate\n+ 15 marts + 3 seeds + 73 tests"]
+        DUCK[("DuckDB<br/>data/warehouse/clinical_trials.duckdb")]
+        DBT["dbt: 8 staging + 7 intermediate<br/>+ 15 marts + 3 seeds + 73 tests"]
     end
 
     subgraph DELIVERY["Delivery"]
-        APP["Streamlit dashboard\n8 pages, read-only"]
-        DQ["Data-quality report\nreports/data_quality_report.md"]
+        APP["Streamlit dashboard<br/>8 pages, read-only"]
+        DQ["Data-quality report<br/>reports/data_quality_report.md"]
         MEMO["Executive memo template"]
     end
 
-    CTG -->|"httpx + retry/backoff\nrun_id per snapshot"| RAW
+    CTG -->|"httpx + retry/backoff<br/>run_id per snapshot"| RAW
     CTG --> MAN
-    RAW -->|"flatten + normalize\n(pandas/pyarrow)"| PQ
+    RAW -->|"flatten + normalize<br/>(pandas/pyarrow)"| PQ
     RAW -.->|invalid records| QUAR
     RAW -.->|field-path scan| BASE
     PQ -->|"read_parquet() sources"| DBT
@@ -246,8 +246,8 @@ clinical-trial-intelligence/
 flowchart LR
     subgraph B["Bronze (JSON, immutable)"]
         direction TB
-        b1["page=00000.json … page=00025.json\n~100 studies per page"]
-        b2["manifest_&lt;run_id&gt;.json\npages, counts, hashes, status"]
+        b1["page=00000.json … page=00025.json<br/>~100 studies per page"]
+        b2["manifest_&lt;run_id&gt;.json<br/>pages, counts, hashes, status"]
     end
     subgraph S["Silver (Parquet, per run)"]
         direction TB
@@ -266,8 +266,8 @@ flowchart LR
         g3["main_marts (15 tables)"]
         g4["main_seeds (3 mapping tables)"]
     end
-    B -->|"make transform\n(flatten, normalize, quarantine)"| S
-    S -->|"make dbt-run\n(read_parquet sources)"| G
+    B -->|"make transform<br/>(flatten, normalize, quarantine)"| S
+    S -->|"make dbt-run<br/>(read_parquet sources)"| G
 ```
 
 Grain contract at every layer:
@@ -297,17 +297,17 @@ sequenceDiagram
     participant D as data/bronze/
 
     U->>O: run_ingestion(condition, full_refresh, max_pages)
-    O->>O: incremental check — recent completed run\nfor same query hash? reuse & exit
+    O->>O: incremental check — recent completed run<br/>for same query hash? reuse & exit
     O->>O: mint run_id (UTC timestamp + query hash)
     loop until no nextPageToken
         O->>C: GET /studies?query.cond=…&pageSize=100&pageToken=…
         C->>A: request (timeout 30s)
         A-->>C: JSON page (+ totalCount on page 1)
-        Note over C: on 429/5xx: exponential backoff,\nmax 5 retries
+        Note over C: on 429/5xx: exponential backoff,<br/>max 5 retries
         C-->>O: validated payload
         O->>D: write page=NNNNN.json (immutable)
     end
-    O->>D: write manifest_&lt;run_id&gt;.json\n(pages, study count, totalCount,\nper-page hashes, status=success)
+    O->>D: write manifest_&lt;run_id&gt;.json<br/>(pages, study count, totalCount,<br/>per-page hashes, status=success)
     O-->>U: exit 0
 ```
 
@@ -353,7 +353,7 @@ flowchart LR
         st3[stg_trial_sponsors]
         st4[stg_trial_conditions]
         st5[stg_trial_snapshots]
-        st6[stg_trial_contacts\n(deliberately empty)]
+        st6["stg_trial_contacts<br/>(deliberately empty)"]
     end
     subgraph IN["Intermediate"]
         i1[int_trial_status_history]
@@ -441,7 +441,7 @@ erDiagram
     dim_trial {
         string trial_key PK
         string nct_id UK "NCT identifier"
-        string registry_url "clinicaltrials.gov/study/<NCT_ID>"
+        string registry_url "clinicaltrials.gov/study/NCTxxxxxxxx"
         string current_brief_title
         string current_overall_status
         string current_phase
@@ -556,14 +556,14 @@ Every row also ships:
 
 ```mermaid
 flowchart TB
-    APP["app.py — Overview\nKPIs + top-of-queue preview"]
-    P1["1 · Priority Queue\nranked segments, score components\nstacked bar, proxy warning"]
-    P2["2 · Competition Landscape\ndensity vs. sponsor-HHI scatter"]
-    P3["3 · Geography Trends\nUS choropleth + monthly trend"]
-    P4["4 · Site Overlap\nmulti-trial facilities table"]
-    P5["5 · Sponsor Landscape\ntop lead sponsors by listings"]
-    P6["6 · Data Reliability\nrun health + scenario explorer"]
-    P7["7 · Trial Explorer\nper-trial records with\nClinicalTrials.gov links"]
+    APP["app.py — Overview<br/>KPIs + top-of-queue preview"]
+    P1["1 · Priority Queue<br/>ranked segments, score components<br/>stacked bar, proxy warning"]
+    P2["2 · Competition Landscape<br/>density vs. sponsor-HHI scatter"]
+    P3["3 · Geography Trends<br/>US choropleth + monthly trend"]
+    P4["4 · Site Overlap<br/>multi-trial facilities table"]
+    P5["5 · Sponsor Landscape<br/>top lead sponsors by listings"]
+    P6["6 · Data Reliability<br/>run health + scenario explorer"]
+    P7["7 · Trial Explorer<br/>per-trial records with<br/>ClinicalTrials.gov links"]
     APP --- P1 --- P2 --- P3 --- P4 --- P5 --- P6 --- P7
 ```
 
@@ -592,16 +592,16 @@ flowchart TB
     subgraph L1["Gate 1 — Ingestion"]
         a1["HTTP retry/backoff on 429/5xx"]
         a2["Payload structural validation"]
-        a3["Manifest: page count, study count,\ntotalCount, per-page SHA-256"]
+        a3["Manifest: page count, study count,<br/>totalCount, per-page SHA-256"]
     end
     subgraph L2["Gate 2 — Transform"]
         b1["Quarantine + reason codes"]
-        b2["Schema-drift scan vs. baseline\n(125 field paths, explicit update flag)"]
+        b2["Schema-drift scan vs. baseline<br/>(125 field paths, explicit update flag)"]
         b3["Per-run profiling stats"]
     end
     subgraph L3["Gate 3 — Warehouse (dbt, 73 tests)"]
-        c1["Schema tests: unique, not_null,\naccepted_values, relationships"]
-        c2["6 singular assertions: one current\nrecord/trial, valid dates & states,\nscore ∈ [0,1], site integrity,\nsnapshot completeness"]
+        c1["Schema tests: unique, not_null,<br/>accepted_values, relationships"]
+        c2["6 singular assertions: one current<br/>record/trial, valid dates & states,<br/>score ∈ [0,1], site integrity,<br/>snapshot completeness"]
     end
     subgraph L4["Gate 4 — Cross-layer reconciliation"]
         d1["bronze count = silver count per run"]
@@ -609,7 +609,7 @@ flowchart TB
         d3["dim_trial = latest silver distinct NCTs"]
         d4["current_record_flag ≤ dim_trial"]
     end
-    L1 --> L2 --> L3 --> L4 --> R["reports/data_quality_report.md\n(make quality-report)"]
+    L1 --> L2 --> L3 --> L4 --> R["reports/data_quality_report.md<br/>(make quality-report)"]
 ```
 
 **Severity philosophy:** `error` = structural invariants this pipeline controls
@@ -687,11 +687,11 @@ make dashboard        # http://localhost:8501
 
 ```mermaid
 flowchart LR
-    CRON["cron / systemd timer / CI\n(weekly)"] --> I[make ingest]
+    CRON["cron / systemd timer / CI<br/>(weekly)"] --> I[make ingest]
     I --> T[make transform]
     T --> R[make dbt-run + dbt-test]
     R --> Q[make quality-report]
-    Q --> H{{"history accrues:\ntransition metrics activate\nat snapshot #2"}}
+    Q --> H{{"history accrues:<br/>transition metrics activate<br/>at snapshot #2"}}
 ```
 
 Each additional snapshot deepens `fct_trial_snapshot`; at two or more snapshots the
@@ -729,10 +729,10 @@ status-transition counts (and `growth_uses_registry_proxy_flag` flips off).
 
 ```mermaid
 flowchart LR
-    M1["MVP (done)\nCT.gov pipeline,\nmarts, dashboard"] --> M2["ACS population layer\nper-capita density"]
-    M2 --> M3["CDC/ATSDR SVI\ncounty access-barrier context"]
-    M3 --> M4["Oncology module\nNCI CTS API"]
-    M4 --> M5["Cloud warehouse portability\n+ orchestration (Dagster/Airflow)"]
+    M1["MVP (done)<br/>CT.gov pipeline,<br/>marts, dashboard"] --> M2["ACS population layer<br/>per-capita density"]
+    M2 --> M3["CDC/ATSDR SVI<br/>county access-barrier context"]
+    M3 --> M4["Oncology module<br/>NCI CTS API"]
+    M4 --> M5["Cloud warehouse portability<br/>+ orchestration (Dagster/Airflow)"]
 ```
 
 ## 19. Documentation index

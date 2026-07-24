@@ -10,42 +10,42 @@ replayed against the exact bytes originally received from the source.
 ```mermaid
 flowchart TB
     subgraph SRC["Source"]
-        CTG["ClinicalTrials.gov API v2\nGET /api/v2/studies\npaginated JSON (nextPageToken)"]
+        CTG["ClinicalTrials.gov API v2<br/>GET /api/v2/studies<br/>paginated JSON (nextPageToken)"]
     end
 
     subgraph ING["Ingestion (src/ingest)"]
         CLI["src.cli ingest"]
-        CLIENT["ctg_client.py\nhttpx + tenacity retries + timeouts"]
-        PAGES["pagination.py\nfollow nextPageToken"]
-        VAL["validate_api_payload.py\npydantic envelope checks"]
-        QUAR["quarantine\nmalformed records + reason codes"]
+        CLIENT["ctg_client.py<br/>httpx + tenacity retries + timeouts"]
+        PAGES["pagination.py<br/>follow nextPageToken"]
+        VAL["validate_api_payload.py<br/>pydantic envelope checks"]
+        QUAR["quarantine<br/>malformed records + reason codes"]
     end
 
     subgraph BRONZE["Bronze — immutable raw"]
-        RAWJSON["data/bronze/api_responses/\nrun_id=&lt;id&gt;/page=&lt;n&gt;.json\n(unmodified page bytes)"]
-        MANIFEST["data/bronze/manifests/\nmanifest_&lt;run_id&gt;.json + summary parquet\nrun times, params, page/response counts, status"]
+        RAWJSON["data/bronze/api_responses/<br/>run_id=&lt;id&gt;/page=&lt;n&gt;.json<br/>(unmodified page bytes)"]
+        MANIFEST["data/bronze/manifests/<br/>manifest_&lt;run_id&gt;.json + summary parquet<br/>run times, params, page/response counts, status"]
     end
 
     subgraph SILVER["Silver — normalized (src/transform)"]
-        FLAT["flatten_studies.py\nnested JSON → tabular"]
-        ENTITIES["Parquet entities:\nsilver_trials · silver_trial_conditions\nsilver_trial_interventions · silver_trial_sponsors\nsilver_trial_locations · silver_trial_outcomes"]
-        TAX["condition_taxonomy.yml\nconfig-driven ADRD mapping"]
-        GEO["geography_rules.yml\nUS state normalization"]
+        FLAT["flatten_studies.py<br/>nested JSON → tabular"]
+        ENTITIES["Parquet entities:<br/>silver_trials · silver_trial_conditions<br/>silver_trial_interventions · silver_trial_sponsors<br/>silver_trial_locations · silver_trial_outcomes"]
+        TAX["condition_taxonomy.yml<br/>config-driven ADRD mapping"]
+        GEO["geography_rules.yml<br/>US state normalization"]
     end
 
     subgraph GOLD["Gold — dimensional (dbt + DuckDB)"]
         STG["staging models"]
-        INT["intermediate models\nstatus history · site activity\nsponsor concentration"]
-        MARTS["dims · facts · bridges ·\nanalytical marts incl.\nmart_feasibility_priority_queue"]
+        INT["intermediate models<br/>status history · site activity<br/>sponsor concentration"]
+        MARTS["dims · facts · bridges ·<br/>analytical marts incl.<br/>mart_feasibility_priority_queue"]
     end
 
     subgraph QA["Quality (src/quality)"]
-        PROF["profiling · schema drift ·\nreconciliation · DQ report"]
+        PROF["profiling · schema drift ·<br/>reconciliation · DQ report"]
         DBTTEST["dbt tests"]
     end
 
     subgraph OUT["Delivery"]
-        APP["Streamlit dashboard\n(reads Gold only)"]
+        APP["Streamlit dashboard<br/>(reads Gold only)"]
         MEMODOC["Executive memo template"]
     end
 
@@ -103,7 +103,7 @@ sequenceDiagram
     B->>G: one row per NCT ID per snapshot date
     Note over G: status_changed_from_previous_snapshot_flag<br/>compares consecutive snapshots
     W->>B: run_id=2026-07-31T…-uuid
-    B->>G: new snapshot rows; current_record_flag moves
+    B->>G: new snapshot rows — current_record_flag moves
 ```
 
 Key consequence: history depth equals the age of this project's own snapshot
