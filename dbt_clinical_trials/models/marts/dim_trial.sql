@@ -19,7 +19,14 @@ select
     c.record_quality_flag,
     c.first_seen_snapshot_date,
     c.snapshot_date as latest_seen_snapshot_date,
-    c.active_in_latest_snapshot_flag
+    c.active_in_latest_snapshot_flag,
+    coalesce(ec.total_criteria_count, 0) as eligibility_criteria_count,
+    coalesce(ec.inclusion_count, 0) as eligibility_inclusion_count,
+    coalesce(ec.exclusion_count, 0) as eligibility_exclusion_count,
+    ec.eligibility_complexity_band,
+    ec.type_diversity_score as eligibility_type_diversity
 from {{ ref('int_current_trial_status') }} c
 inner join {{ ref('stg_trials') }} t
     on c.ingestion_run_id = t.ingestion_run_id and c.nct_id = t.nct_id
+left join {{ ref('int_trial_eligibility_complexity') }} ec
+    on c.ingestion_run_id = ec.ingestion_run_id and c.nct_id = ec.nct_id

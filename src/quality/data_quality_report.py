@@ -15,6 +15,7 @@ from loguru import logger
 
 from src.config import ProjectConfig, get_config
 from src.ingest.snapshot_manifest import load_manifests
+from src.quality.phi_scanner import scan_silver_entity
 from src.quality.reconciliation import run_reconciliation
 from src.quality.schema_drift import check_drift
 from src.utils.dates import utc_now_iso
@@ -52,6 +53,30 @@ def _reliability_rows(cfg: ProjectConfig) -> list[dict]:
         return [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
     finally:
         con.close()
+
+
+def _run_phi_scan(cfg: ProjectConfig) -> dict | None:
+    import pandas as pd
+
+    trials_dir = cfg.paths.silver / "silver_trials"
+    if not trials_dir.exists():
+        return None
+    parquet_files = list(trials_dir.glob("*.parquet"))
+    if not parquet_files:
+        return None
+
+    df = pd.read_parquet(trials_dir)
+    text_fields = ["brief_title", "official_title", "eligibility_criteria_text"]
+    cols = ["nct_id"] + [f for f in text_fields if f in df.columns]
+    records = df[cols].where(df[cols].notna(), None).to_dict("records")
+    summary = scan_silver_entity(records, text_fields)
+    return {
+        "total_records_scanned": summary.total_records_scanned,
+        "total_findings": summary.total_findings,
+        "findings_by_type": summary.findings_by_type,
+        "affected_nct_ids": summary.affected_nct_ids[:20],
+        "status": summary.status,
+    }
 
 
 def build_report(cfg: ProjectConfig | None = None, output_path: Path | None = None) -> Path:
@@ -130,6 +155,24 @@ def build_report(cfg: ProjectConfig | None = None, output_path: Path | None = No
             lines.append(f"- Removed: {json.dumps(drift['removed_paths'])}")
     else:
         lines.append("_No complete ingestion runs to check._")
+
+    lines += ["", "## PHI/PII compliance scan", ""]
+    phi_summary = _run_phi_scan(cfg)
+    if phi_summary:
+        lines.append(f"- Records scanned: {phi_summary['total_records_scanned']}")
+        lines.append(f"- Status: **{phi_summary['status']}**")
+        if phi_summary["total_findings"] > 0:
+            lines.append(f"- Findings: {phi_summary['total_findings']}")
+            lines.append(f"- Affected studies: {len(phi_summary['affected_nct_ids'])}")
+            lines.append("- By type:")
+            for etype, count in sorted(
+                phi_summary["findings_by_type"].items(), key=lambda x: -x[1]
+            ):
+                lines.append(f"  - {etype}: {count}")
+        else:
+            lines.append("- No PHI/PII patterns detected in scanned free-text fields.")
+    else:
+        lines.append("_Silver data not available for PHI scan._")
 
     lines += [
         "",

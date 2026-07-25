@@ -1,0 +1,57 @@
+{
+  "iteration_id": "006",
+  "feature_implemented": "P2: OMOP CDM + P3: Enrollment Forecasting",
+  "status": "SUCCESS",
+  "reward_score": 900.0,
+  "validation_summary": {
+    "pytest_passed": true,
+    "pytest_count": "95/95",
+    "dbt_test_passed": true,
+    "dbt_test_count": "119/119",
+    "lint_passed": true,
+    "phi_scan": "OPERATIONAL",
+    "pipeline_verified": true,
+    "dashboard_verified": true
+  },
+  "metrics": {
+    "iteration_5_omop": {
+      "condition_occurrences": 5289,
+      "mapped_ad_conditions": 3493,
+      "drug_exposures": 4898,
+      "known_drug_mapping_rate": 1.0,
+      "seeds_added": 2,
+      "models_added": 4
+    },
+    "iteration_6_enrollment": {
+      "forecast_segments": 40,
+      "active_recruiting_ad_trials": 345,
+      "avg_target_enrollment_ad": 459,
+      "models_added": 2
+    },
+    "total_dbt_nodes": 119,
+    "total_seeds": 5,
+    "total_table_models": 18,
+    "total_view_models": 20
+  },
+  "history": [
+    {"iteration_id": "001", "feature": "P1: Eligibility Criteria NLP Structuring", "status": "SUCCESS", "reward_score": 150.0},
+    {"iteration_id": "002", "feature": "P4: PHI/PII Scan Gate", "status": "SUCCESS", "reward_score": 150.0},
+    {"iteration_id": "003", "feature": "P3: dbt Eligibility Analytics Models", "status": "SUCCESS", "reward_score": 150.0},
+    {"iteration_id": "004", "feature": "Eligibility in dim_trial + Dashboard Page", "status": "SUCCESS", "reward_score": 150.0},
+    {"iteration_id": "005", "feature": "P2: OMOP CDM Harmonization Layer", "status": "SUCCESS", "reward_score": 150.0,
+      "files_added": [
+        "dbt_clinical_trials/seeds/omop_condition_concepts.csv",
+        "dbt_clinical_trials/seeds/omop_drug_concepts.csv",
+        "dbt_clinical_trials/models/intermediate/int_omop_condition_occurrence.sql",
+        "dbt_clinical_trials/models/intermediate/int_omop_drug_exposure.sql",
+        "dbt_clinical_trials/models/marts/mart_omop_condition_occurrence.sql",
+        "dbt_clinical_trials/models/marts/mart_omop_drug_exposure.sql"
+      ]},
+    {"iteration_id": "006", "feature": "P3: Enrollment Forecasting Model", "status": "SUCCESS", "reward_score": 150.0,
+      "files_added": [
+        "dbt_clinical_trials/models/intermediate/int_enrollment_velocity.sql",
+        "dbt_clinical_trials/models/marts/mart_enrollment_forecast.sql"
+      ]}
+  ],
+  "next_recommended_action": "Add OMOP + enrollment dashboard pages, or expand OMOP concept seed coverage"
+}

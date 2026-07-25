@@ -1,6 +1,6 @@
 # Data Quality Report
 
-Generated: 2026-07-24T22:37:35+00:00 (UTC)
+Generated: 2026-07-24T23:55:05+00:00 (UTC)
 
 Scope: public ClinicalTrials.gov registry snapshots taken by this
 project. Quality findings describe registry listings, not trial
@@ -29,6 +29,16 @@ conduct or outcomes.
 - Run checked: `20260724T203950Z_46dc682b`
 - Status: **ok**
 - Observed field paths: 125
+
+## PHI/PII compliance scan
+
+- Records scanned: 2592
+- Status: **FINDINGS_DETECTED**
+- Findings: 10
+- Affected studies: 8
+- By type:
+  - person_name: 8
+  - street_address: 2
 
 ## Interpretation guardrails
 

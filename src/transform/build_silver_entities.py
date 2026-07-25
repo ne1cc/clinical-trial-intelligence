@@ -21,6 +21,7 @@ ENTITY_NAMES = (
     "silver_trial_sponsors",
     "silver_trial_locations",
     "silver_trial_outcomes",
+    "silver_trial_eligibility_criteria",
 )
 
 

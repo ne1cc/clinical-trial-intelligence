@@ -22,6 +22,10 @@ sources:
           Non-U.S. rows preserved and flagged unusable for U.S.-scope marts.
       - name: silver_trial_outcomes
         description: One row per NCT ID + outcome type + outcome index + run.
+      - name: silver_trial_eligibility_criteria
+        description: >
+          One row per NCT ID + criterion index + run. Structured eligibility
+          criteria parsed from free-text with direction and type classification.
 
   - name: bronze
     description: Ingestion-run manifests written by src/ingest.

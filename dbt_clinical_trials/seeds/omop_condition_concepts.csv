@@ -1,0 +1,10 @@
+condition_group,omop_concept_id,omop_concept_name,omop_vocabulary,omop_domain,snomed_code
+alzheimers_disease,4297650,Alzheimer's disease,SNOMED,Condition,26929004
+mild_cognitive_impairment,4182210,Mild cognitive disorder,SNOMED,Condition,110352000
+lewy_body_dementia,4041685,Lewy body dementia,SNOMED,Condition,110352000
+frontotemporal_dementia,4043328,Frontotemporal dementia,SNOMED,Condition,230258005
+vascular_dementia,380019,Vascular dementia,SNOMED,Condition,42916000
+parkinsons_disease_dementia,4148906,Parkinson's disease dementia,SNOMED,Condition,191449005
+dementia_unspecified,4194614,Dementia,SNOMED,Condition,52448006
+cognitive_impairment_other,4182210,Mild cognitive disorder,SNOMED,Condition,110352000
+non_dementia_other,0,Unmapped condition,SNOMED,Condition,0

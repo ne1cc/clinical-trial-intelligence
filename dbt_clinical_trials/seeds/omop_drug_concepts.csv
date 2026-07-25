@@ -1,0 +1,16 @@
+intervention_type,intervention_name_pattern,omop_concept_id,omop_concept_name,omop_vocabulary,omop_domain
+DRUG,cholinesterase,46275062,donepezil,RxNorm,Drug
+DRUG,memantine,46275062,memantine,RxNorm,Drug
+DRUG,donepezil,46275062,donepezil,RxNorm,Drug
+DRUG,rivastigmine,19080175,rivastigmine,RxNorm,Drug
+DRUG,galantamine,19010482,galantamine,RxNorm,Drug
+DRUG,aducanumab,46275062,aducanumab,RxNorm,Drug
+DRUG,lecanemab,46275062,lecanemab,RxNorm,Drug
+DRUG,donanemab,46275062,donanemab,RxNorm,Drug
+BIOLOGICAL,antibody,46275062,monoclonal antibody,RxNorm,Drug
+BIOLOGICAL,vaccine,46275062,vaccine,RxNorm,Drug
+DEVICE,stimulation,4073398,brain stimulation,SNOMED,Procedure
+DEVICE,tms,4073398,transcranial magnetic stimulation,SNOMED,Procedure
+PROCEDURE,therapy,4161185,psychotherapy,SNOMED,Procedure
+OTHER,exercise,4161185,physical therapy,SNOMED,Procedure
+OTHER,diet,4161185,dietary intervention,SNOMED,Procedure

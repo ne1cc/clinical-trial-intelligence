@@ -11,6 +11,7 @@ from typing import Any
 
 from src.transform.normalize_conditions import ConditionTaxonomy
 from src.transform.normalize_locations import GeographyRules
+from src.transform.parse_eligibility import parse_eligibility_criteria
 from src.utils.dates import parse_partial_date
 from src.utils.hashing import sha256_json
 from src.utils.text import normalize_text
@@ -210,6 +211,21 @@ def flatten_study(
                 }
             )
 
+    eligibility_criteria = []
+    parse_result = parse_eligibility_criteria(nct_id, eligibility.get("eligibilityCriteria"))
+    for idx, criterion in enumerate(parse_result.criteria):
+        eligibility_criteria.append(
+            {
+                **base,
+                "criterion_index": idx,
+                "direction": criterion.direction.value,
+                "criterion_type": criterion.criterion_type.value,
+                "criterion_text": criterion.text,
+                "section_label": criterion.section_label,
+                "parse_quality": parse_result.parse_quality,
+            }
+        )
+
     return {
         "silver_trials": [trial],
         "silver_trial_conditions": conditions,
@@ -217,6 +233,7 @@ def flatten_study(
         "silver_trial_sponsors": sponsors,
         "silver_trial_locations": locations,
         "silver_trial_outcomes": outcomes,
+        "silver_trial_eligibility_criteria": eligibility_criteria,
     }
 
 

@@ -65,3 +65,19 @@ models:
 
   - name: stg_trial_contacts
     description: Deliberately empty (privacy guardrail) — contacts are never extracted.
+
+  - name: stg_trial_eligibility_criteria
+    description: Structured eligibility criteria parsed from free-text.
+    columns:
+      - name: nct_id
+        tests: [not_null]
+      - name: direction
+        tests:
+          - accepted_values:
+              values: [inclusion, exclusion]
+      - name: criterion_type
+        tests:
+          - accepted_values:
+              values:
+                [age, biomarker, condition, medication, procedure,
+                 demographic, consent, laboratory, other]

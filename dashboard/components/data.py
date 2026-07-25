@@ -121,3 +121,92 @@ def overview_metrics() -> dict:
         """
     ).iloc[0]
     return row.to_dict()
+
+
+def eligibility_overview() -> dict:
+    metrics = query(
+        """
+        select
+            count(*) as total_trials,
+            count(*) filter (eligibility_criteria_count > 0) as trials_with_criteria,
+            round(avg(eligibility_criteria_count) filter (eligibility_criteria_count > 0), 1)
+                as avg_criteria_count,
+            count(*) filter (eligibility_complexity_band = 'high') as high_complexity,
+            count(*) filter (eligibility_complexity_band = 'moderate') as moderate_complexity,
+            count(*) filter (eligibility_complexity_band = 'low') as low_complexity
+        from main_marts.dim_trial
+        """
+    ).iloc[0].to_dict()
+
+    type_dist = query(
+        """
+        select criterion_type, direction, count(*) as criterion_count
+        from main_staging.stg_trial_eligibility_criteria
+        group by 1, 2
+        order by criterion_count desc
+        """
+    )
+
+    complexity_by_phase = query(
+        """
+        select
+            current_phase as phase,
+            count(*) as trial_count,
+            round(avg(eligibility_criteria_count), 1) as avg_criteria,
+            round(avg(eligibility_type_diversity), 2) as avg_type_diversity,
+            count(*) filter (eligibility_complexity_band = 'high') as high_complexity_count
+        from main_marts.dim_trial
+        where eligibility_criteria_count > 0
+        group by 1
+        order by avg_criteria desc
+        """
+    )
+
+    return {
+        "metrics": metrics,
+        "type_distribution": type_dist,
+        "complexity_by_phase": complexity_by_phase,
+    }
+
+
+def omop_condition_summary() -> pd.DataFrame:
+    return query(
+        """
+        select
+            condition_concept_name,
+            condition_vocabulary,
+            count(*) as occurrence_count,
+            count(distinct person_source_value) as trial_count,
+            round(100.0 * count(*) filter (dementia_relevance_flag) / count(*), 1)
+                as dementia_relevant_pct
+        from main_marts.mart_omop_condition_occurrence
+        group by 1, 2
+        order by occurrence_count desc
+        """
+    )
+
+
+def omop_drug_summary() -> pd.DataFrame:
+    return query(
+        """
+        select
+            drug_concept_name,
+            drug_domain,
+            drug_vocabulary,
+            count(*) as exposure_count,
+            count(distinct person_source_value) as trial_count,
+            count(*) filter (concept_mapped_flag) as mapped_count
+        from main_marts.mart_omop_drug_exposure
+        group by 1, 2, 3
+        order by exposure_count desc
+        """
+    )
+
+
+def enrollment_forecast() -> pd.DataFrame:
+    return query(
+        """
+        select * from main_marts.mart_enrollment_forecast
+        order by condition_group, trial_count desc
+        """
+    )
