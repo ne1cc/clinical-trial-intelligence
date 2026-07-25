@@ -29,7 +29,12 @@ def require_warehouse() -> None:
 
 @st.cache_data(ttl=600)
 def query(sql: str) -> pd.DataFrame:
-    return _connection().execute(sql).df()
+    df = _connection().execute(sql).df()
+    for col in df.select_dtypes(include=["string"]).columns:
+        df[col] = df[col].astype("object")
+    for col in df.select_dtypes(include=["Int32", "Int64"]).columns:
+        df[col] = df[col].astype("float64")
+    return df
 
 
 def priority_queue() -> pd.DataFrame:
