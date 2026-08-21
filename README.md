@@ -1,65 +1,24 @@
-# Clinical Trial Access & Recruitment Competition Intelligence
+# Clinical Trial Access & Feasibility Intelligence
 
-A tested, local-first healthcare analytics platform that ingests and versions public
-ClinicalTrials.gov registry data, tracks trial-status changes across weekly snapshots,
-and prioritizes condition–geography–phase markets for **feasibility review** using
-transparent, documented operational signals.
+[![CI](https://github.com/n1ecC/clinical-trial-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/n1ecC/clinical-trial-intelligence/actions/workflows/ci.yml)
 
-> 📑 **Executive Business Case & Stakeholder Brief:** See [`docs/business_case.md`](docs/business_case.md) for full clinical operational ROI analysis and the site-feasibility decision framework.
+Over 80% of clinical trials miss their initial enrollment deadlines, largely because sponsors pick trial sites already overcrowded with competing studies for the same patient pool.
 
-> **Interpretation rule:** every output of this project is a *public-registry-based
-> planning signal*, not a recruitment forecast, not clinical decision support, and not
-> a judgment of any site, sponsor, or population.
+This project turns public registry data from **ClinicalTrials.gov (API v2)** into an automated feasibility and site-selection intelligence suite. It snapshots trial statuses over time, detects weekly state transitions, and calculates competition density scores across diseases, phases, and geographies—giving clinical operations teams clear signals on where to recruit before committing millions to site activation.
+
+> 📑 **Executive Business Case:** See [`docs/business_case.md`](docs/business_case.md) for trial operational ROI, cost-of-delay analysis, and the site-feasibility decision framework.
+>
+> ⚠️ **Interpretation Note:** All outputs are *public-registry-based planning signals* for operational feasibility review, not clinical decision support or predictive patient forecasts.
 
 ---
 
-## 1. Executive summary
+### Highlights
+- **Weekly Snapshot History:** Builds longitudinal state transitions from an API that only provides current-day snapshots.
+- **Market Congestion Scoring:** dbt dimensional models in DuckDB ranking recruitment competition across US state and phase combinations.
+- **Interactive Feasibility App:** Streamlit dashboard with granular filtering across condition taxonomies and sponsor networks.
+- **Production-Grade Engineering:** Strict type normalization into immutable Parquet, automated dbt tests, and CI workflows.
 
-Sponsors and CROs must decide where to conduct clinical trials. Before activating a
-site, feasibility teams need to know whether a therapeutic area and geography shows
-high competing-study activity, concentrated sponsor activity, repeated site
-participation, or potential patient-access barriers. This project builds a
-reproducible pipeline (Python → DuckDB → dbt → Streamlit) over ClinicalTrials.gov API
-v2 that produces a ranked **Feasibility Review Priority Queue** for Alzheimer's
-disease and related dementias in the United States. All findings are computed only
-after the pipeline runs on real source data — nothing is invented.
-
-## 2. The clinical-operations decision supported
-
-**Stakeholder:** Director of Clinical Operations / Head of Site Feasibility.
-
-**Question:** *"Which condition–geography–phase combinations should receive a
-feasibility review before we invest in activating or expanding clinical trial sites?"*
-
-**Decision:** Prioritize feasibility reviews where recruiting-trial density, recent
-trial growth, sponsor concentration, and listed-site overlap suggest potential
-operational or recruitment competition — then validate with feasibility outreach
-before committing startup resources.
-
-## 3. Why this is not a recruitment prediction model
-
-- No participant-level data exists in this project.
-- Registry listing ≠ verified recruitment activity; statuses can lag operations.
-- Trial density is a *potential competition signal*, not proof of competition.
-- The priority score is a transparent weighted ranking of public-record signals with
-  every component and denominator displayed — it is not a validated predictive
-  probability.
-- See [`docs/clinical_interpretation_guardrails.md`](docs/clinical_interpretation_guardrails.md).
-
-## 4. Public data source and API documentation
-
-| Item | Value |
-|---|---|
-| Source | [ClinicalTrials.gov](https://clinicaltrials.gov) public registry (NLM) |
-| API | [API v2 documentation](https://clinicaltrials.gov/data-api/api) |
-| Endpoint | `GET https://clinicaltrials.gov/api/v2/studies` |
-| OpenAPI spec | `https://clinicaltrials.gov/api/oas/v2` |
-| Pagination | `pageSize` + `pageToken`; follow `nextPageToken` until absent |
-| History | The API returns only *current* records; this project constructs history by retaining repeated snapshots |
-
-All query parameters are configured in [`config/project_config.yml`](config/project_config.yml)
-and were verified against the live API (parameter names: `query.cond`,
-`filter.overallStatus`, `filter.advanced`, `pageSize`, `pageToken`, `countTotal`).
+---
 
 ## 5. Architecture diagram
 
