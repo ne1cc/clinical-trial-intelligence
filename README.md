@@ -5,6 +5,8 @@ ClinicalTrials.gov registry data, tracks trial-status changes across weekly snap
 and prioritizes condition–geography–phase markets for **feasibility review** using
 transparent, documented operational signals.
 
+> 📑 **Executive Business Case & Stakeholder Brief:** See [`docs/business_case.md`](docs/business_case.md) for full clinical operational ROI analysis and the site-feasibility decision framework.
+
 > **Interpretation rule:** every output of this project is a *public-registry-based
 > planning signal*, not a recruitment forecast, not clinical decision support, and not
 > a judgment of any site, sponsor, or population.
