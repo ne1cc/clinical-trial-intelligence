@@ -9,12 +9,13 @@ data.require_warehouse()
 
 trials = data.trial_explorer()
 
-col1, col2 = st.columns(3)[:2]
-col1.metric("Trials in warehouse", f"{len(trials):,}")
-col2.metric(
-    "Currently recruiting",
-    f"{int((trials['overall_status'] == 'RECRUITING').sum()):,}",
-)
+with st.container(border=True):
+    col1, col2 = st.columns(3)[:2]
+    col1.metric("Trials in warehouse", f"{len(trials):,}")
+    col2.metric(
+        "Currently recruiting",
+        f"{int((trials['overall_status'] == 'RECRUITING').sum()):,}",
+    )
 
 statuses = sorted(trials["overall_status"].dropna().unique())
 phases = sorted(trials["phase"].dropna().unique())

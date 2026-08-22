@@ -13,16 +13,17 @@ data.require_warehouse()
 competition = data.recruiting_competition()
 filtered = segment_filters(competition)
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Segments", len(filtered))
-col2.metric(
-    "Elevated-signal segments",
-    int((filtered["competition_signal_band"] == "elevated").sum()),
-)
-col3.metric(
-    "Recruiting listings",
-    int(filtered["recruiting_trial_count"].sum()),
-)
+with st.container(border=True):
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Segments", len(filtered))
+    col2.metric(
+        "Elevated-signal segments",
+        int((filtered["competition_signal_band"] == "elevated").sum()),
+    )
+    col3.metric(
+        "Recruiting listings",
+        int(filtered["recruiting_trial_count"].sum()),
+    )
 proxy_caption()
 
 st.subheader("Recruiting density vs sponsor concentration")
@@ -48,6 +49,7 @@ st.caption(
     "cuts, not absolute judgments."
 )
 
+st.divider()
 st.subheader("Segments by signal band")
 st.dataframe(
     filtered.sort_values(

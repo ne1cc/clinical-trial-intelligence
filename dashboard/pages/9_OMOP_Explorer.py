@@ -12,11 +12,12 @@ conditions = data.omop_condition_summary()
 drugs = data.omop_drug_summary()
 
 st.subheader("Condition concept mapping (SNOMED CT)")
-col1, col2 = st.columns(2)
-col1.metric("Mapped conditions", f"{len(conditions):,}")
-col2.metric(
-    "Total occurrences", f"{int(conditions['occurrence_count'].sum()):,}"
-)
+with st.container(border=True):
+    col1, col2 = st.columns(2)
+    col1.metric("Mapped conditions", f"{len(conditions):,}")
+    col2.metric(
+        "Total occurrences", f"{int(conditions['occurrence_count'].sum()):,}"
+    )
 
 if not conditions.empty:
     fig = px.bar(

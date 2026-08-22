@@ -24,12 +24,14 @@ pending = int(
 )
 attrited = int(forecast["attrited_trial_count"].sum())
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total trials", f"{total_trials:,}")
-col2.metric("Active recruiting", f"{active:,}")
-col3.metric("Pending", f"{pending:,}")
-col4.metric("Attrited", f"{attrited:,}")
+with st.container(border=True):
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total trials", f"{total_trials:,}")
+    col2.metric("Active recruiting", f"{active:,}")
+    col3.metric("Pending", f"{pending:,}")
+    col4.metric("Attrited", f"{attrited:,}")
 
+st.divider()
 st.subheader("Enrollment stage by condition group")
 stage_pivot = forecast.pivot_table(
     index="condition_group",
@@ -51,6 +53,7 @@ if not stage_pivot.empty:
     fig.update_layout(height=400, xaxis_tickangle=-30)
     st.plotly_chart(fig, width="stretch")
 
+st.divider()
 st.subheader("Enrollment velocity signals")
 velocity_df = forecast[
     ["condition_group", "enrollment_stage", "trial_count",

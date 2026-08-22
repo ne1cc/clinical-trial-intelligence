@@ -51,6 +51,7 @@ if not success.empty:
         f"{latest['low_confidence_condition_share']:.1%}",
     )
 
+st.divider()
 st.subheader("Known limitations")
 st.markdown(
     """

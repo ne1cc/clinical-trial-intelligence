@@ -45,6 +45,7 @@ st.dataframe(
     width="stretch",
 )
 
+st.divider()
 st.subheader("States with the most multi-trial facilities")
 by_state = (
     overlap[overlap["repeated_site_participation_flag"]]

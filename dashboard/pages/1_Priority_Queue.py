@@ -13,10 +13,11 @@ queue = data.priority_queue()
 filtered = segment_filters(queue)
 
 band_counts = filtered["priority_band"].value_counts()
-col1, col2, col3 = st.columns(3)
-col1.metric("Priority review", int(band_counts.get("priority_review", 0)))
-col2.metric("Review", int(band_counts.get("review", 0)))
-col3.metric("Watch", int(band_counts.get("watch", 0)))
+with st.container(border=True):
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Priority review", int(band_counts.get("priority_review", 0)))
+    col2.metric("Review", int(band_counts.get("review", 0)))
+    col3.metric("Watch", int(band_counts.get("watch", 0)))
 
 if bool(filtered["growth_uses_registry_proxy_flag"].any()):
     st.warning(
@@ -45,6 +46,7 @@ st.dataframe(
     width="stretch",
 )
 
+st.divider()
 st.subheader("Score composition (top 15 shown)")
 top = filtered.head(15).copy()
 top["segment"] = (

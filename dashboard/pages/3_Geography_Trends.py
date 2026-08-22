@@ -37,6 +37,7 @@ st.caption(
     "least one usable U.S. site in that state — not patient availability."
 )
 
+st.divider()
 st.subheader("Top states")
 st.dataframe(
     latest.sort_values("recruiting_trial_count", ascending=False)[
@@ -55,6 +56,7 @@ st.dataframe(
 
 months = scoped["activity_month"].nunique()
 if months > 1:
+    st.divider()
     st.subheader("Monthly trend")
     fig2 = px.line(
         scoped.groupby("activity_month", as_index=False)["recruiting_trial_count"].sum(),

@@ -9,11 +9,12 @@ data.require_warehouse()
 
 metrics = data.overview_metrics()
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Trials tracked", f"{int(metrics['total_trials']):,}")
-col2.metric("Currently recruiting", f"{int(metrics['recruiting_trials']):,}")
-col3.metric("States with listed sites", int(metrics["states_with_sites"]))
-col4.metric("Listed facilities", f"{int(metrics['listed_facilities']):,}")
+with st.container(border=True):
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Trials tracked", f"{int(metrics['total_trials']):,}")
+    col2.metric("Currently recruiting", f"{int(metrics['recruiting_trials']):,}")
+    col3.metric("States with listed sites", int(metrics["states_with_sites"]))
+    col4.metric("Listed facilities", f"{int(metrics['listed_facilities']):,}")
 
 st.caption(
     f"Latest snapshot: {metrics['latest_snapshot']} · "
@@ -45,6 +46,7 @@ st.page_link(
     icon=":material/arrow_forward:",
 )
 
+st.divider()
 st.subheader("How to read this dashboard")
 st.markdown(
     """

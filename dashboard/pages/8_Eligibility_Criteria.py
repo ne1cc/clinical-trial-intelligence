@@ -45,6 +45,7 @@ if not type_df.empty:
     fig.update_layout(xaxis_tickangle=-45, height=400)
     st.plotly_chart(fig, width="stretch")
 
+st.divider()
 st.subheader("Eligibility complexity by phase")
 phase_df = overview["complexity_by_phase"]
 if not phase_df.empty:
