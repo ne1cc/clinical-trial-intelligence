@@ -1,64 +1,81 @@
-"""Overview — Clinical Trial Access & Recruitment Competition Intelligence."""
+"""Router — Clinical Trial Access & Recruitment Competition Intelligence."""
 
 import streamlit as st
-from components import data
-from components.guardrails import guarded_footer, page_setup, proxy_caption
 
-page_setup("Recruitment Competition Intelligence — Overview")
-data.require_warehouse()
-
-metrics = data.overview_metrics()
-
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Trials tracked", f"{int(metrics['total_trials']):,}")
-col2.metric("Currently recruiting", f"{int(metrics['recruiting_trials']):,}")
-col3.metric("States with listed sites", int(metrics["states_with_sites"]))
-col4.metric("Listed facilities", f"{int(metrics['listed_facilities']):,}")
-
-st.caption(
-    f"Latest snapshot: {metrics['latest_snapshot']} · "
-    f"snapshots accrued: {int(metrics['snapshot_count'])}"
+st.set_page_config(
+    page_title="Clinical Trial Intelligence",
+    page_icon=":material/monitor_heart:",
+    layout="wide",
 )
-proxy_caption()
 
-st.subheader("Top of the Feasibility Review Priority Queue")
-queue = data.priority_queue()
-st.dataframe(
-    queue.head(10)[
-        [
-            "priority_rank",
-            "condition_group",
-            "state_normalized",
-            "phase_normalized",
-            "feasibility_review_priority_score",
-            "priority_band",
-            "recruiting_trial_count",
-            "priority_explanation",
-        ]
+# Section order follows how a feasibility review is actually sequenced, which is
+# why it does not match filename order: sponsor concentration is read before
+# facility overlap.
+NAVIGATION = {
+    "": [
+        st.Page(
+            "pages/0_Overview.py",
+            title="Overview",
+            icon=":material/dashboard:",
+            default=True,
+        ),
     ],
-    hide_index=True,
-    width="stretch",
-)
-st.page_link(
-    "pages/1_Priority_Queue.py",
-    label="Open the full Priority Queue",
-    icon=":material/arrow_forward:",
-)
+    "Feasibility Signals": [
+        st.Page(
+            "pages/1_Priority_Queue.py",
+            title="Priority Queue",
+            icon=":material/format_list_numbered:",
+        ),
+        st.Page(
+            "pages/2_Competition_Landscape.py",
+            title="Competition Landscape",
+            icon=":material/scatter_plot:",
+        ),
+        st.Page(
+            "pages/3_Geography_Trends.py",
+            title="Geography Trends",
+            icon=":material/public:",
+        ),
+        st.Page(
+            "pages/5_Sponsor_Landscape.py",
+            title="Sponsor Landscape",
+            icon=":material/apartment:",
+        ),
+        st.Page(
+            "pages/4_Site_Overlap.py",
+            title="Site Overlap",
+            icon=":material/join_inner:",
+        ),
+    ],
+    "Clinical Data Explorer": [
+        st.Page(
+            "pages/7_Trial_Explorer.py",
+            title="Trial Explorer",
+            icon=":material/search:",
+        ),
+        st.Page(
+            "pages/8_Eligibility_Criteria.py",
+            title="Eligibility Criteria",
+            icon=":material/rule:",
+        ),
+        st.Page(
+            "pages/9_OMOP_Explorer.py",
+            title="OMOP Explorer",
+            icon=":material/database:",
+        ),
+    ],
+    "Forecasting & Data Trust": [
+        st.Page(
+            "pages/10_Enrollment_Forecast.py",
+            title="Enrollment Forecast",
+            icon=":material/trending_up:",
+        ),
+        st.Page(
+            "pages/6_Data_Reliability.py",
+            title="Data Reliability",
+            icon=":material/verified:",
+        ),
+    ],
+}
 
-st.subheader("How to read this dashboard")
-st.markdown(
-    """
-- **Priority Queue** ranks condition x state x phase segments for *human
-  feasibility review* using weighted, normalized registry signals.
-- **Competition Landscape** shows recruiting density, sponsor
-  concentration, and growth signals per segment.
-- **Geography Trends** tracks monthly listing activity by state.
-- **Site Overlap** flags facilities listed by multiple recruiting trials
-  (best-effort facility matching).
-- **Sponsor Landscape** summarizes lead sponsors of recruiting trials.
-- **Data Reliability** exposes run-level reconciliation and the
-  assumption-driven scenario explorer.
-    """
-)
-
-guarded_footer()
+st.navigation(NAVIGATION).run()
