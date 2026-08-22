@@ -1,0 +1,80 @@
+# Dashboard theme — clinical analytics identity.
+#
+# Chart palettes are GLOBAL in Streamlit (there is no theme.light/theme.dark
+# variant for chart colors), so the categorical set below was chosen to pass
+# the dataviz validator against BOTH the light and dark chart surfaces.
+# See docs/superpowers/plans/2026-08-21-dashboard-ui-ux-light-pass.md.
+
+[theme]
+base = "light"
+primaryColor = "#2a78d6"
+backgroundColor = "#fcfcfb"
+secondaryBackgroundColor = "#f2f1ee"
+textColor = "#0b0b0b"
+linkColor = "#2a78d6"
+borderColor = "#dedcd6"
+linkUnderline = false
+
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "6px"
+buttonRadius = "6px"
+
+# Inter loads from Google Fonts; offline it degrades to the system sans stack.
+font = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@600;700&display=swap"
+baseFontSize = 14
+headingFontSizes = ["28px", "22px", "18px", "16px", "14px", "12px"]
+headingFontWeights = [700, 600, 600, 600, 500, 500]
+metricValueFontSize = "30px"
+metricValueFontWeight = 600
+
+dataframeBorderColor = "#dedcd6"
+dataframeHeaderBackgroundColor = "#f2f1ee"
+
+greenColor = "#008300"
+redColor = "#e34948"
+yellowColor = "#eda100"
+orangeColor = "#eb6834"
+blueColor = "#2a78d6"
+grayColor = "#52514e"
+
+chartCategoricalColors = [
+    "#3987e5",
+    "#d95926",
+    "#199e70",
+    "#c98500",
+    "#d55181",
+    "#008300",
+    "#9085e9",
+    "#e66767",
+]
+
+chartSequentialColors = [
+    "#cde2fb",
+    "#9ec5f4",
+    "#86b6ef",
+    "#6da7ec",
+    "#5598e7",
+    "#3987e5",
+    "#2a78d6",
+    "#256abf",
+    "#1c5cab",
+    "#184f95",
+]
+
+[theme.dark]
+backgroundColor = "#1a1a19"
+secondaryBackgroundColor = "#262624"
+textColor = "#ffffff"
+borderColor = "#383835"
+primaryColor = "#3987e5"
+linkColor = "#3987e5"
+greenColor = "#008300"
+redColor = "#e66767"
+dataframeBorderColor = "#383835"
+dataframeHeaderBackgroundColor = "#262624"
+
+[theme.sidebar]
+backgroundColor = "#f7f6f3"
+borderColor = "#dedcd6"
