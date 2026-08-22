@@ -4,6 +4,7 @@ import plotly.express as px
 import streamlit as st
 from components import data
 from components.guardrails import guarded_footer, page_setup
+from components.palette import semantic
 
 page_setup("Eligibility Criteria", icon=":material/checklist:")
 data.require_warehouse()
@@ -36,7 +37,10 @@ if not type_df.empty:
             "criterion_count": "Count",
             "direction": "Direction",
         },
-        color_discrete_map={"inclusion": "#2ecc71", "exclusion": "#e74c3c"},
+        color_discrete_map={
+            "inclusion": semantic("green"),
+            "exclusion": semantic("red"),
+        },
     )
     fig.update_layout(xaxis_tickangle=-45, height=400)
     st.plotly_chart(fig, width="stretch")

@@ -29,7 +29,6 @@ fig = px.choropleth(
     locationmode="USA-states",
     color="recruiting_trial_count",
     scope="usa",
-    color_continuous_scale="Blues",
     labels={"recruiting_trial_count": "Recruiting listings"},
 )
 st.plotly_chart(fig, width="stretch")

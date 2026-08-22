@@ -30,7 +30,6 @@ if not conditions.empty:
             "condition_concept_name": "OMOP Concept",
             "dementia_relevant_pct": "% Dementia-Relevant",
         },
-        color_continuous_scale="Blues",
     )
     fig.update_layout(height=350, yaxis_categoryorder="total ascending")
     st.plotly_chart(fig, width="stretch")

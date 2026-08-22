@@ -1,10 +1,14 @@
 """Theme contract: the dashboard's visual identity lives in config, not in pages."""
 
+import re
+import sys
 import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / ".streamlit" / "config.toml"
+PAGES_DIR = ROOT / "dashboard" / "pages"
+HEX = re.compile(r"#[0-9a-fA-F]{6}\b")
 
 # Validated with the dataviz validator against BOTH chart surfaces:
 # light #fcfcfb and dark #1a1a19. All checks pass in both modes.
@@ -49,3 +53,25 @@ def test_primary_is_not_the_streamlit_default():
 
 def test_dark_mode_is_deliberately_themed():
     assert "dark" in _theme(), "dark mode must be themed, not left to chance"
+
+
+def test_pages_never_hardcode_colors():
+    """Color belongs in config.toml or components/palette.py — never in a page.
+
+    Hardcoded hex in a page silently overrides the theme, which is how a
+    dashboard drifts back into looking unthemed one chart at a time.
+    """
+    offenders = []
+    for page in sorted(PAGES_DIR.glob("*.py")):
+        for lineno, line in enumerate(page.read_text(encoding="utf-8").splitlines(), 1):
+            if HEX.search(line):
+                offenders.append(f"{page.name}:{lineno}: {line.strip()}")
+    assert not offenders, "hardcoded colors found:\n" + "\n".join(offenders)
+
+
+def test_signal_band_scale_is_ordinal_and_complete():
+    sys.path.insert(0, str(ROOT / "dashboard"))
+    from components.palette import SIGNAL_BAND_SCALE
+
+    assert list(SIGNAL_BAND_SCALE) == ["low", "moderate", "elevated"]
+    assert len(set(SIGNAL_BAND_SCALE.values())) == 3, "each band needs its own step"

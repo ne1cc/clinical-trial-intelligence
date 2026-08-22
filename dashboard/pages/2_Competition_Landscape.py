@@ -5,6 +5,7 @@ import streamlit as st
 from components import data
 from components.filters import segment_filters
 from components.guardrails import guarded_footer, page_setup, proxy_caption
+from components.palette import SIGNAL_BAND_ORDER, SIGNAL_BAND_SCALE
 
 page_setup("Competition Landscape")
 data.require_warehouse()
@@ -31,7 +32,8 @@ fig = px.scatter(
     y="sponsor_hhi",
     size="listed_site_count",
     color="competition_signal_band",
-    category_orders={"competition_signal_band": ["low", "moderate", "elevated"]},
+    category_orders={"competition_signal_band": SIGNAL_BAND_ORDER},
+    color_discrete_map=SIGNAL_BAND_SCALE,
     hover_data=["condition_group", "state_normalized", "phase_normalized", "sponsor_count"],
     labels={
         "recruiting_trial_count": "Recruiting listings in segment",
