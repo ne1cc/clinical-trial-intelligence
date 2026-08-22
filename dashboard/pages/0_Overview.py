@@ -39,6 +39,22 @@ st.dataframe(
     ],
     hide_index=True,
     width="stretch",
+    column_config={
+        "priority_rank": st.column_config.NumberColumn("Rank", format="%d"),
+        "condition_group": st.column_config.TextColumn("Condition group"),
+        "state_normalized": st.column_config.TextColumn("State"),
+        "phase_normalized": st.column_config.TextColumn("Phase"),
+        "feasibility_review_priority_score": st.column_config.NumberColumn(
+            "Priority score", format="%.3f"
+        ),
+        "priority_band": st.column_config.TextColumn("Band"),
+        "recruiting_trial_count": st.column_config.NumberColumn(
+            "Recruiting listings", format="%d"
+        ),
+        "priority_explanation": st.column_config.TextColumn(
+            "Why this rank", width="large"
+        ),
+    },
 )
 st.page_link(
     "pages/1_Priority_Queue.py",
