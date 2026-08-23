@@ -43,6 +43,19 @@ st.dataframe(
     ].head(200),
     hide_index=True,
     width="stretch",
+    column_config={
+        "facility_name": st.column_config.TextColumn("Facility", width="large"),
+        "city": st.column_config.TextColumn("City"),
+        "state_normalized": st.column_config.TextColumn("State"),
+        "recruiting_trial_count": st.column_config.NumberColumn(
+            "Recruiting listings", format="%d"
+        ),
+        "listed_trial_count": st.column_config.NumberColumn(
+            "Listed trials", format="%d"
+        ),
+        "sponsor_count": st.column_config.NumberColumn("Sponsors", format="%d"),
+        "phase_mix": st.column_config.TextColumn("Phase mix", width="medium"),
+    },
 )
 
 st.divider()

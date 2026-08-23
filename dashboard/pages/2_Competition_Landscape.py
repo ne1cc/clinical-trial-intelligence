@@ -71,6 +71,29 @@ st.dataframe(
     ],
     hide_index=True,
     width="stretch",
+    column_config={
+        "condition_group": st.column_config.TextColumn("Condition group"),
+        "state_normalized": st.column_config.TextColumn("State"),
+        "phase_normalized": st.column_config.TextColumn("Phase"),
+        "recruiting_trial_count": st.column_config.NumberColumn(
+            "Recruiting listings", format="%d"
+        ),
+        "listed_site_count": st.column_config.NumberColumn(
+            "Listed sites", format="%d"
+        ),
+        "new_recruiting_90d": st.column_config.NumberColumn(
+            "New recruiting (90d)", format="%d"
+        ),
+        "newly_posted_90d_proxy": st.column_config.NumberColumn(
+            "Newly posted (90d, proxy)", format="%d"
+        ),
+        "sponsor_count": st.column_config.NumberColumn("Sponsors", format="%d"),
+        "top_sponsor_share": st.column_config.NumberColumn(
+            "Top sponsor share", format="percent"
+        ),
+        "sponsor_hhi": st.column_config.NumberColumn("Sponsor HHI", format="%.3f"),
+        "competition_signal_band": st.column_config.TextColumn("Signal band"),
+    },
 )
 
 guarded_footer()

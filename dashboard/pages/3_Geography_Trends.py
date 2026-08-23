@@ -52,6 +52,20 @@ st.dataframe(
     ].head(20),
     hide_index=True,
     width="stretch",
+    column_config={
+        "state_normalized": st.column_config.TextColumn("State"),
+        "trial_count": st.column_config.NumberColumn("Listings", format="%d"),
+        "recruiting_trial_count": st.column_config.NumberColumn(
+            "Recruiting listings", format="%d"
+        ),
+        "sponsor_count": st.column_config.NumberColumn("Sponsors", format="%d"),
+        "newly_posted_in_month_proxy": st.column_config.NumberColumn(
+            "Newly posted (proxy)", format="%d"
+        ),
+        "recruiting_growth_3m": st.column_config.NumberColumn(
+            "Growth (3m)", format="%.2f"
+        ),
+    },
 )
 
 months = scoped["activity_month"].nunique()

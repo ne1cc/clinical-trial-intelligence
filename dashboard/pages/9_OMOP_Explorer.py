@@ -40,6 +40,15 @@ st.dataframe(
     hide_index=True,
     width="stretch",
     column_config={
+        "condition_concept_name": st.column_config.TextColumn(
+            "OMOP concept", width="large"
+        ),
+        "condition_vocabulary": st.column_config.TextColumn("Vocabulary"),
+        "occurrence_count": st.column_config.NumberColumn(
+            "Occurrences", format="%d"
+        ),
+        "trial_count": st.column_config.NumberColumn("Trials", format="%d"),
+        # Already scaled to 0..100 in the source query, so not "percent".
         "dementia_relevant_pct": st.column_config.NumberColumn(
             "Dementia %", format="%.1f"
         ),
@@ -60,7 +69,16 @@ if not drugs.empty:
         hide_index=True,
         width="stretch",
         column_config={
-            "mapped_count": st.column_config.NumberColumn("Mapped"),
+            "drug_concept_name": st.column_config.TextColumn(
+                "OMOP concept", width="large"
+            ),
+            "drug_domain": st.column_config.TextColumn("Domain"),
+            "drug_vocabulary": st.column_config.TextColumn("Vocabulary"),
+            "exposure_count": st.column_config.NumberColumn(
+                "Exposures", format="%d"
+            ),
+            "trial_count": st.column_config.NumberColumn("Trials", format="%d"),
+            "mapped_count": st.column_config.NumberColumn("Mapped", format="%d"),
         },
     )
 

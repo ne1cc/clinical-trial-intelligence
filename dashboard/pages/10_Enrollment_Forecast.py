@@ -66,20 +66,26 @@ st.dataframe(
     hide_index=True,
     width="stretch",
     column_config={
+        "condition_group": st.column_config.TextColumn("Condition group"),
+        "enrollment_stage": st.column_config.TextColumn("Enrollment stage"),
+        "trial_count": st.column_config.NumberColumn("Trials", format="%d"),
         "avg_target_enrollment": st.column_config.NumberColumn(
-            "Avg Target", format="%.0f"
+            "Avg target", format="%.0f"
         ),
         "avg_planned_duration_days": st.column_config.NumberColumn(
-            "Avg Duration (days)", format="%.0f"
+            "Avg duration (days)", format="%.0f"
         ),
         "avg_planned_rate_per_day": st.column_config.NumberColumn(
-            "Planned Rate/Day", format="%.2f"
+            "Planned rate/day", format="%.2f"
         ),
+        # A 0..1 fraction, so "percent" scales it; the previous "%.1%%" was
+        # a malformed printf string.
         "attrition_rate": st.column_config.NumberColumn(
-            "Attrition Rate", format="%.1%%"
+            "Attrition rate", format="percent"
         ),
+        # Already scaled to 0..100 in the source model, so not "percent".
         "stale_listing_pct": st.column_config.NumberColumn(
-            "Stale %", format="%.1f"
+            "Stale listings %", format="%.1f"
         ),
     },
 )

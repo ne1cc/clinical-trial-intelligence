@@ -32,7 +32,19 @@ st.plotly_chart(fig, width="stretch")
 
 st.divider()
 st.subheader("All lead sponsors")
-st.dataframe(sponsors, hide_index=True, width="stretch")
+st.dataframe(
+    sponsors,
+    hide_index=True,
+    width="stretch",
+    column_config={
+        "lead_sponsor": st.column_config.TextColumn("Lead sponsor", width="large"),
+        "sponsor_class": st.column_config.TextColumn("Registry sponsor class"),
+        "recruiting_trial_count": st.column_config.NumberColumn(
+            "Recruiting listings", format="%d"
+        ),
+        "phase_mix": st.column_config.TextColumn("Phase mix", width="medium"),
+    },
+)
 
 st.caption(
     "Counts of registry listings by lead sponsor — not market share, "

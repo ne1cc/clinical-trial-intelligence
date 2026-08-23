@@ -31,6 +31,30 @@ st.dataframe(
     ],
     hide_index=True,
     width="stretch",
+    column_config={
+        "ingestion_run_id": st.column_config.TextColumn("Run ID", width="medium"),
+        "snapshot_date": st.column_config.DateColumn("Snapshot"),
+        "status": st.column_config.TextColumn("Status"),
+        "page_count": st.column_config.NumberColumn("Pages", format="%d"),
+        "manifest_record_count": st.column_config.NumberColumn(
+            "Manifest records", format="%d"
+        ),
+        "trial_row_count": st.column_config.NumberColumn("Trial rows", format="%d"),
+        "manifest_reconciled_flag": st.column_config.CheckboxColumn("Reconciled"),
+        "unique_nct_flag": st.column_config.CheckboxColumn("Unique NCT"),
+        "quarantined_record_count": st.column_config.NumberColumn(
+            "Quarantined", format="%d"
+        ),
+        "flagged_record_share": st.column_config.NumberColumn(
+            "Flagged", format="percent"
+        ),
+        "usable_location_share": st.column_config.NumberColumn(
+            "Usable locations", format="percent"
+        ),
+        "low_confidence_condition_share": st.column_config.NumberColumn(
+            "Low-confidence conditions", format="percent"
+        ),
+    },
 )
 st.caption(
     "Only status = success runs feed analytics. Partial runs (page-capped "
@@ -118,6 +142,17 @@ st.dataframe(
     ],
     hide_index=True,
     width="stretch",
+    column_config={
+        "Reviews deprioritized (assumed)": st.column_config.NumberColumn(
+            format="%d"
+        ),
+        "Review-effort value (USD)": st.column_config.NumberColumn(format="dollar"),
+        "Activations influenced (assumed)": st.column_config.NumberColumn(
+            format="%.1f"
+        ),
+        "Activation value (USD)": st.column_config.NumberColumn(format="dollar"),
+        "Total, illustrative (USD)": st.column_config.NumberColumn(format="dollar"),
+    },
 )
 st.caption(
     "Every figure above is the product of the editable assumptions in "

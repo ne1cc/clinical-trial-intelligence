@@ -3,6 +3,7 @@
 Requires a built warehouse; skipped otherwise (e.g. in CI without data).
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -57,6 +58,41 @@ def test_every_page_shows_disclaimer():
     for script in PAGES:
         source = (ROOT / script).read_text(encoding="utf-8")
         assert "page_setup(" in source, f"{script} must use page_setup (guardrail banner)"
+
+
+COLUMN_CONFIG_KEY = re.compile(r'^\s*"([^"]+)":\s*st\.column_config\.', re.MULTILINE)
+
+
+@pytest.mark.parametrize("script", RUNNABLE)
+def test_column_config_keys_match_real_columns(script):
+    """A column_config key that matches no column is silently ignored.
+
+    Streamlit does not raise on an unknown key — the column just renders
+    untyped — so a typo would otherwise pass every other test in this file.
+    """
+    from streamlit.testing.v1 import AppTest
+
+    # app.py is the router; its rendered tables come from the Overview page.
+    source_path = ROOT / (
+        "dashboard/pages/0_Overview.py" if script.endswith("app.py") else script
+    )
+    keys = set(COLUMN_CONFIG_KEY.findall(source_path.read_text(encoding="utf-8")))
+    if not keys:
+        pytest.skip("page configures no dataframe columns")
+
+    if str(ROOT / "dashboard") not in sys.path:
+        sys.path.insert(0, str(ROOT / "dashboard"))
+    at = AppTest.from_file(str(ROOT / script), default_timeout=60)
+    at.run()
+
+    rendered = set()
+    for element in at.dataframe:
+        rendered.update(str(column) for column in element.value.columns)
+
+    unknown = sorted(keys - rendered)
+    assert not unknown, (
+        f"{source_path.name} configures columns that do not exist: {unknown}"
+    )
 
 
 def test_every_page_is_registered_in_navigation():

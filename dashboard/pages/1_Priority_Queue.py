@@ -44,6 +44,30 @@ st.dataframe(
     ],
     hide_index=True,
     width="stretch",
+    column_config={
+        "priority_rank": st.column_config.NumberColumn("Rank", format="%d"),
+        "condition_group": st.column_config.TextColumn("Condition group"),
+        "state_normalized": st.column_config.TextColumn("State"),
+        "phase_normalized": st.column_config.TextColumn("Phase"),
+        "feasibility_review_priority_score": st.column_config.NumberColumn(
+            "Priority score", format="%.3f"
+        ),
+        "priority_band": st.column_config.TextColumn("Band"),
+        "recruiting_trial_count": st.column_config.NumberColumn(
+            "Recruiting listings", format="%d"
+        ),
+        # HHI is a concentration index on 0..1, not a percentage.
+        "sponsor_hhi": st.column_config.NumberColumn("Sponsor HHI", format="%.3f"),
+        "site_overlap_share": st.column_config.NumberColumn(
+            "Site overlap", format="percent"
+        ),
+        "data_confidence_share": st.column_config.NumberColumn(
+            "Data confidence", format="percent"
+        ),
+        "priority_explanation": st.column_config.TextColumn(
+            "Why this rank", width="large"
+        ),
+    },
 )
 
 st.divider()
