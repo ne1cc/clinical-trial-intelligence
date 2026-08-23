@@ -194,7 +194,7 @@ components, denominators, and deterministic explanations are displayed.
 ## 19. Data-quality and clinical interpretation guardrails
 
 Automated checks cover ingestion integrity, trial validation, relationship integrity,
-geographic validity, and metric rules — 73 dbt data tests plus a 47-test pytest suite,
+geographic validity, and metric rules — 73 dbt data tests plus a 117-test pytest suite,
 cross-layer reconciliation, and schema-drift detection
 ([`docs/data_quality_framework.md`](docs/data_quality_framework.md)). Interpretation
 guardrails prohibit claims about recruitment failure, patient eligibility, healthcare
@@ -246,7 +246,7 @@ organization test whether a feasibility-review process could justify its cost us
   that ingests and versions 2,592 public ClinicalTrials.gov trial records into
   29 tested analytics models with full bronze→silver→gold reconciliation.
 - Designed snapshot-based status-history models and a 5-layer automated data-quality
-  framework (73 dbt tests, 47 pytest tests, quarantine, schema-drift detection)
+  framework (73 dbt tests, 117 pytest tests, quarantine, schema-drift detection)
   tracking 419 recruiting Alzheimer's studies across 50 U.S. states and 6,241 listed
   facilities.
 - Developed an interpretable feasibility-review prioritization framework scoring 449

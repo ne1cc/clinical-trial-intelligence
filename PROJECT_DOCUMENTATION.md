@@ -45,7 +45,7 @@ Documentation snapshot: built and verified against the live warehouse of **2026-
 | Source | [ClinicalTrials.gov API v2](https://clinicaltrials.gov/data-api/api) (public, no key) |
 | Stack | Python 3.11+ · uv · DuckDB · dbt · Streamlit · Plotly · pytest · ruff |
 | Architecture | Local-first medallion: bronze JSON → silver Parquet → gold dbt marts |
-| Automated tests | **73 dbt data tests** + **47 pytest tests** — all green |
+| Automated tests | **73 dbt data tests** + **117 pytest tests** — all green |
 | dbt resources | 30 models (8 staging views, 7 intermediate views, 15 mart tables) + 3 seeds |
 
 **Live warehouse figures (single snapshot, 2026-07-24):**
@@ -153,7 +153,7 @@ flowchart TB
     end
 
     subgraph DELIVERY["Delivery"]
-        APP["Streamlit dashboard<br/>8 pages, read-only"]
+        APP["Streamlit dashboard<br/>11 pages, read-only"]
         DQ["Data-quality report<br/>reports/data_quality_report.md"]
         MEMO["Executive memo template"]
     end
@@ -232,7 +232,7 @@ clinical-trial-intelligence/
 │   ├── components/               # data (cached queries), guardrails, filters
 │   └── pages/                    # 7 numbered pages (queue → trial explorer)
 │
-├── tests/                        # 47 pytest tests (unit + dashboard smoke)
+├── tests/                        # 117 pytest tests (unit + dashboard smoke)
 ├── docs/                         # 10 focused documents (see §19)
 ├── data/                         # git-ignored: bronze/ silver/ warehouse/ quarantine/
 └── reports/                      # generated data-quality report
@@ -552,20 +552,43 @@ Every row also ships:
 
 ## 11. Streamlit dashboard
 
-`make dashboard` → http://localhost:8501. Eight pages, all read-only.
+`make dashboard` → http://localhost:8501. Eleven pages, all read-only.
+
+`app.py` is a router: it declares the sidebar sections with `st.navigation` and
+runs the selected page. All page content lives in `dashboard/pages/`, including
+the Overview.
 
 ```mermaid
 flowchart TB
-    APP["app.py — Overview<br/>KPIs + top-of-queue preview"]
-    P1["1 · Priority Queue<br/>ranked segments, score components<br/>stacked bar, proxy warning"]
-    P2["2 · Competition Landscape<br/>density vs. sponsor-HHI scatter"]
-    P3["3 · Geography Trends<br/>US choropleth + monthly trend"]
-    P4["4 · Site Overlap<br/>multi-trial facilities table"]
-    P5["5 · Sponsor Landscape<br/>top lead sponsors by listings"]
-    P6["6 · Data Reliability<br/>run health + scenario explorer"]
-    P7["7 · Trial Explorer<br/>per-trial records with<br/>ClinicalTrials.gov links"]
-    APP --- P1 --- P2 --- P3 --- P4 --- P5 --- P6 --- P7
+    APP["app.py — router<br/>st.navigation sections"]
+    OV["0 · Overview<br/>KPIs + top-of-queue preview"]
+    subgraph S1["Feasibility Signals"]
+        P1["1 · Priority Queue<br/>ranked segments, score components"]
+        P2["2 · Competition Landscape<br/>density vs. sponsor-HHI scatter"]
+        P3["3 · Geography Trends<br/>US choropleth + monthly trend"]
+        P5["5 · Sponsor Landscape<br/>top lead sponsors by listings"]
+        P4["4 · Site Overlap<br/>multi-trial facilities table"]
+    end
+    subgraph S2["Clinical Data Explorer"]
+        P7["7 · Trial Explorer<br/>per-trial records with links"]
+        P8["8 · Eligibility Criteria<br/>criterion mix and complexity"]
+        P9["9 · OMOP Explorer<br/>SNOMED / RxNorm concept mappings"]
+    end
+    subgraph S3["Forecasting & Data Trust"]
+        P10["10 · Enrollment Forecast<br/>stage mix + velocity signals"]
+        P6["6 · Data Reliability<br/>run health + scenario explorer"]
+    end
+    APP --> OV
+    APP --> S1
+    APP --> S2
+    APP --> S3
 ```
+
+The visual identity lives in `.streamlit/config.toml` — palette, typography,
+surfaces, and chart colors. See `docs/dashboard_spec.md` § Theming for why the
+categorical palette had to validate against both the light and dark chart
+surfaces, and why the competition signal band uses an ordinal blue ramp rather
+than a red scale.
 
 | Guardrail | Enforcement |
 |---|---|
@@ -575,6 +598,9 @@ flowchart TB
 | Query caching | `st.cache_data(ttl=600)` |
 | Scenario explorer never writes | sliders adjust session-only copies of `config/roi_assumptions.yml` |
 | Trial links | `registry_url` column rendered with `st.column_config.LinkColumn` — opens the authoritative public record |
+| No hardcoded chart colors | `tests/test_theme.py` fails if any page contains a hex literal; color lives in config or `components/palette.py` |
+| Every page reachable | `test_every_page_is_registered_in_navigation` fails if a page file is missing from `app.py` |
+| Score shown as an index, not a bar | priority score and HHI use decimal `NumberColumn`, never `ProgressColumn`, which would imply a validated probability |
 
 The page-6 **scenario explorer** replaces fake ROI claims: users plug in *their own*
 cost assumptions (review cost, deprioritized-share, activation cost, influence share)
