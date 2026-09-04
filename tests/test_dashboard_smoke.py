@@ -11,10 +11,6 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 WAREHOUSE = ROOT / "data" / "warehouse" / "clinical_trials.duckdb"
 
-pytestmark = pytest.mark.skipif(
-    not WAREHOUSE.exists(), reason="warehouse not built (run make pipeline)"
-)
-
 PAGES = [
     "dashboard/app.py",
     "dashboard/pages/1_Priority_Queue.py",
@@ -27,6 +23,23 @@ PAGES = [
 ]
 
 
+def warehouse_has_marts() -> bool:
+    if not WAREHOUSE.exists():
+        return False
+    try:
+        import duckdb
+
+        con = duckdb.connect(str(WAREHOUSE), read_only=True)
+        tables = con.execute("SHOW ALL TABLES").fetchall()
+        schemas = {t[1] for t in tables}
+        return "main_marts" in schemas
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(
+    not warehouse_has_marts(), reason="marts not built in warehouse (run make pipeline)"
+)
 @pytest.mark.parametrize("script", PAGES)
 def test_page_runs_without_exception(script):
     from streamlit.testing.v1 import AppTest

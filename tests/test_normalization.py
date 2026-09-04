@@ -10,6 +10,7 @@ GEOGRAPHY = get_geography_rules()
 
 # --- text + date helpers -----------------------------------------------------
 
+
 def test_normalize_text_cleans_punctuation_and_case():
     assert normalize_text("  Alzheimer's  Disease ") == "alzheimers disease"
     assert normalize_text("Early-Onset, AD") == "early onset ad"
@@ -26,6 +27,7 @@ def test_parse_partial_date_handles_all_precisions():
 
 
 # --- condition taxonomy ------------------------------------------------------
+
 
 def test_alzheimers_exact_match_high_confidence():
     mapping = TAXONOMY.map_condition("Alzheimer's Disease")
@@ -56,6 +58,7 @@ def test_unrelated_condition_gets_default_low_confidence():
 
 # --- geography ---------------------------------------------------------------
 
+
 def test_state_full_name_and_abbreviation_normalize():
     assert GEOGRAPHY.normalize_state("California") == "CA"
     assert GEOGRAPHY.normalize_state("ca") == "CA"
@@ -78,6 +81,7 @@ def test_us_location_usable_and_scoped():
 
 
 # --- phases + quality flags --------------------------------------------------
+
 
 def test_normalize_phases():
     assert normalize_phases(None) == (None, "UNKNOWN")
@@ -142,9 +146,7 @@ FIXTURE_STUDY = {
         },
         "conditionsModule": {"conditions": ["Alzheimer Disease", "Mild Cognitive Impairment"]},
         "armsInterventionsModule": {
-            "interventions": [
-                {"type": "DRUG", "name": "Compound-X", "description": "Oral tablet"}
-            ]
+            "interventions": [{"type": "DRUG", "name": "Compound-X", "description": "Oral tablet"}]
         },
         "outcomesModule": {
             "primaryOutcomes": [

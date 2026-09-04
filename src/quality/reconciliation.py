@@ -40,9 +40,7 @@ def run_reconciliation(cfg: ProjectConfig | None = None) -> list[ReconciliationC
     cfg = cfg or get_config()
     checks: list[ReconciliationCheck] = []
 
-    success_runs = [
-        m for m in load_manifests(cfg.paths.bronze_manifests) if m.status == "success"
-    ]
+    success_runs = [m for m in load_manifests(cfg.paths.bronze_manifests) if m.status == "success"]
     if not success_runs:
         checks.append(
             ReconciliationCheck(
@@ -95,9 +93,7 @@ def run_reconciliation(cfg: ProjectConfig | None = None) -> list[ReconciliationC
     if warehouse.exists():
         con = duckdb.connect(str(warehouse), read_only=True)
         try:
-            dim_trial_count = con.execute(
-                "select count(*) from main_marts.dim_trial"
-            ).fetchone()[0]
+            dim_trial_count = con.execute("select count(*) from main_marts.dim_trial").fetchone()[0]
             latest_stats = _silver_trial_stats(cfg, latest.ingestion_run_id)
             expected_trials = latest_stats[1] if latest_stats else None
             checks.append(

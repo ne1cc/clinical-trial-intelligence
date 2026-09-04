@@ -48,11 +48,7 @@ st.dataframe(
 st.subheader("Score composition (top 15 shown)")
 top = filtered.head(15).copy()
 top["segment"] = (
-    top["condition_group"]
-    + " · "
-    + top["state_normalized"]
-    + " · "
-    + top["phase_normalized"]
+    top["condition_group"] + " · " + top["state_normalized"] + " · " + top["phase_normalized"]
 )
 components = {
     "normalized_recruiting_trial_count": "Recruiting density",

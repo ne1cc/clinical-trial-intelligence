@@ -102,9 +102,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.update_schema_baseline:
                 cfg = get_config()
                 success = [
-                    m
-                    for m in load_manifests(cfg.paths.bronze_manifests)
-                    if m.status == "success"
+                    m for m in load_manifests(cfg.paths.bronze_manifests) if m.status == "success"
                 ]
                 if success:
                     latest = max(success, key=lambda m: m.ingestion_run_id)

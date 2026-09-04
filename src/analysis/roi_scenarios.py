@@ -72,9 +72,7 @@ def compute_scenarios(config: RoiConfig) -> list[ScenarioResult]:
     results: list[ScenarioResult] = []
     for key, scenario in config.scenarios.items():
         reviews_deprioritized = (
-            config.reviews_per_cycle
-            * a.deprioritized_review_share
-            * scenario.review_multiplier
+            config.reviews_per_cycle * a.deprioritized_review_share * scenario.review_multiplier
         )
         review_value = reviews_deprioritized * a.cost_per_feasibility_review
         activations_influenced = (
@@ -82,9 +80,7 @@ def compute_scenarios(config: RoiConfig) -> list[ScenarioResult]:
             * a.activation_decisions_influenced_share
             * scenario.activation_multiplier
         )
-        activation_value = (
-            activations_influenced * a.cost_per_underperforming_site_activation
-        )
+        activation_value = activations_influenced * a.cost_per_underperforming_site_activation
         results.append(
             ScenarioResult(
                 scenario_key=key,

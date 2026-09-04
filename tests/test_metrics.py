@@ -71,11 +71,11 @@ def test_weighted_score_stays_in_bounds(seed_weights):
     w = seed_weights
     rows = con.execute(
         f"""
-        select {w['normalized_recruiting_trial_count']} * density
-             + {w['normalized_recent_recruiting_growth']} * growth
-             + {w['normalized_sponsor_concentration']} * concentration
-             + {w['normalized_site_overlap']} * overlap
-             + {w['normalized_data_confidence_adjustment']} * confidence
+        select {w["normalized_recruiting_trial_count"]} * density
+             + {w["normalized_recent_recruiting_growth"]} * growth
+             + {w["normalized_sponsor_concentration"]} * concentration
+             + {w["normalized_site_overlap"]} * overlap
+             + {w["normalized_data_confidence_adjustment"]} * confidence
         from components
         """
     ).fetchall()

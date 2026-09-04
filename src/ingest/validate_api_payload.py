@@ -52,9 +52,7 @@ def screen_studies(studies: list[Any], page_number: int) -> list[QuarantineRecor
                 )
             )
             continue
-        nct_id = (
-            study.get("protocolSection", {}).get("identificationModule", {}).get("nctId")
-        )
+        nct_id = study.get("protocolSection", {}).get("identificationModule", {}).get("nctId")
         if not nct_id:
             quarantined.append(
                 QuarantineRecord(

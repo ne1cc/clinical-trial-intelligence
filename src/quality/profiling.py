@@ -16,9 +16,7 @@ from src.utils.paths import ensure_dir
 
 def profile_entity(path: Path) -> dict:
     frame = pd.read_parquet(path)
-    null_rates = (
-        {} if frame.empty else (frame.isna().mean().round(4)).to_dict()
-    )
+    null_rates = {} if frame.empty else (frame.isna().mean().round(4)).to_dict()
     profile = {
         "row_count": int(len(frame)),
         "column_count": int(frame.shape[1]),

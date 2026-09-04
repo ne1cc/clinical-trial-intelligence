@@ -61,9 +61,7 @@ def test_find_reusable_run_ignores_other_hash_failed_and_stale(tmp_path):
     write_manifest(tmp_path, make_manifest(query_hash="other"))
     write_manifest(tmp_path, make_manifest(status="failed"))
     write_manifest(tmp_path, make_manifest(status="partial"))
-    write_manifest(
-        tmp_path, make_manifest(started_at_utc=utc_now() - timedelta(hours=48))
-    )
+    write_manifest(tmp_path, make_manifest(started_at_utc=utc_now() - timedelta(hours=48)))
     assert find_reusable_run(tmp_path, "abc123", reuse_window_hours=24) is None
 
 

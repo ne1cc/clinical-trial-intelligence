@@ -75,9 +75,18 @@ def build_report(cfg: ProjectConfig | None = None, output_path: Path | None = No
     reliability = _reliability_rows(cfg)
     if reliability:
         headers = [
-            "run", "snapshot date", "status", "pages", "manifest records",
-            "silver rows", "reconciled", "unique NCT", "quarantined",
-            "flagged share", "usable location share", "low-confidence cond. share",
+            "run",
+            "snapshot date",
+            "status",
+            "pages",
+            "manifest records",
+            "silver rows",
+            "reconciled",
+            "unique NCT",
+            "quarantined",
+            "flagged share",
+            "usable location share",
+            "low-confidence cond. share",
         ]
         lines.append("| " + " | ".join(headers) + " |")
         lines.append("|" + " --- |" * len(headers))
@@ -87,11 +96,18 @@ def build_report(cfg: ProjectConfig | None = None, output_path: Path | None = No
                 + " | ".join(
                     _fmt(row[key])
                     for key in (
-                        "ingestion_run_id", "snapshot_date", "status", "page_count",
-                        "manifest_record_count", "trial_row_count",
-                        "manifest_reconciled_flag", "unique_nct_flag",
-                        "quarantined_record_count", "flagged_record_share",
-                        "usable_location_share", "low_confidence_condition_share",
+                        "ingestion_run_id",
+                        "snapshot_date",
+                        "status",
+                        "page_count",
+                        "manifest_record_count",
+                        "trial_row_count",
+                        "manifest_reconciled_flag",
+                        "unique_nct_flag",
+                        "quarantined_record_count",
+                        "flagged_record_share",
+                        "usable_location_share",
+                        "low_confidence_condition_share",
                     )
                 )
                 + " |"
@@ -111,14 +127,10 @@ def build_report(cfg: ProjectConfig | None = None, output_path: Path | None = No
         )
     failed = sum(1 for c in checks if not c.passed)
     lines.append("")
-    lines.append(
-        f"**{len(checks) - failed}/{len(checks)} reconciliation checks passed.**"
-    )
+    lines.append(f"**{len(checks) - failed}/{len(checks)} reconciliation checks passed.**")
 
     lines += ["", "## Schema drift", ""]
-    success_runs = [
-        m for m in load_manifests(cfg.paths.bronze_manifests) if m.status == "success"
-    ]
+    success_runs = [m for m in load_manifests(cfg.paths.bronze_manifests) if m.status == "success"]
     if success_runs:
         latest = max(success_runs, key=lambda m: m.ingestion_run_id)
         drift = check_drift(latest.ingestion_run_id, cfg=cfg)

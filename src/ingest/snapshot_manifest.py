@@ -56,7 +56,9 @@ def load_manifests(manifests_dir: Path) -> list[IngestionManifest]:
         return manifests
     for path in sorted(manifests_dir.glob("manifest_*.json")):
         try:
-            manifests.append(IngestionManifest.model_validate_json(path.read_text(encoding="utf-8")))
+            manifests.append(
+                IngestionManifest.model_validate_json(path.read_text(encoding="utf-8"))
+            )
         except Exception as exc:
             logger.warning("Skipping unreadable manifest {}: {}", path.name, exc)
     return manifests
