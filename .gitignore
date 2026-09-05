@@ -38,3 +38,6 @@ logs/
 .idea/
 .vscode/
 data/bronze/_schema_drift_*.json
+
+# Linked worktrees
+.worktrees/
