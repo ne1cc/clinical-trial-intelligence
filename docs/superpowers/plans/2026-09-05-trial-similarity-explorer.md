@@ -589,6 +589,48 @@ entry, matching its indentation):
         tests: [not_null]
       - name: similarity_rank
         tests: [not_null]
+      - name: same_condition
+        tests: [not_null]
+      - name: weight_same_condition
+        tests: [not_null]
+      - name: weighted_same_condition
+        tests: [not_null]
+      - name: same_phase
+        tests: [not_null]
+      - name: weight_same_phase
+        tests: [not_null]
+      - name: weighted_same_phase
+        tests: [not_null]
+      - name: geography_overlap
+        tests: [not_null]
+      - name: weight_geography_overlap
+        tests: [not_null]
+      - name: weighted_geography_overlap
+        tests: [not_null]
+      - name: intervention_type_overlap
+        tests: [not_null]
+      - name: weight_intervention_type_overlap
+        tests: [not_null]
+      - name: weighted_intervention_type_overlap
+        tests: [not_null]
+      - name: study_design_match
+        tests: [not_null]
+      - name: weight_study_design_match
+        tests: [not_null]
+      - name: weighted_study_design_match
+        tests: [not_null]
+      - name: eligibility_compatible
+        tests: [not_null]
+      - name: weight_eligibility_compatible
+        tests: [not_null]
+      - name: weighted_eligibility_compatible
+        tests: [not_null]
+      - name: enrollment_band_match
+        tests: [not_null]
+      - name: weight_enrollment_band_match
+        tests: [not_null]
+      - name: weighted_enrollment_band_match
+        tests: [not_null]
       - name: similarity_explanation
 ```
 
@@ -643,9 +685,9 @@ up from 30).
 
 Run: `make dbt-test`
 Expected: all tests pass, including the 3 new singular tests and the
-new `_marts.yml` column tests (85+ total, up from 84 after PR #1 — the
-count depends on which of PR #1/#2 have merged by the time this runs;
-treat "no failures" as the bar, not an exact number).
+~27 new `_marts.yml` column tests (roughly 114 total, up from 84 after
+PR #1 — the exact count depends on which of PR #1/#2 have merged by the
+time this runs; treat "no failures" as the bar, not an exact number).
 
 - [ ] **Step 5: Spot-check real data**
 
