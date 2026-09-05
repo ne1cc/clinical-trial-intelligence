@@ -2,7 +2,15 @@
 
 import argparse
 
+from src.profiles import get_registry
 from src.utils.logging import setup_logging
+
+# Legacy profile name aliases kept for backward compatibility.
+# `--profile default` maps to `adrd`; `--profile full-catalog` maps to `full_catalog`.
+_PROFILE_ALIASES: dict[str, str] = {
+    "default": "adrd",
+    "full-catalog": "full_catalog",
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -21,7 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--condition",
         default=None,
-        help='Condition query (default: query.cond from config, e.g. "Alzheimer Disease").',
+        help='Condition query (default: query.cond from profile config, e.g. "Alzheimer Disease").',
     )
     ingest.add_argument(
         "--full-refresh",
@@ -36,11 +44,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ingest.add_argument(
         "--profile",
-        choices=["default", "full-catalog"],
         default="default",
-        help="Ingestion scope profile. 'full-catalog' fetches all conditions worldwide "
-        "into a separate bronze tree (config/full_catalog_config.yml); it is "
-        "additive and does not affect the default ADRD/US pipeline.",
+        help=(
+            "Indication profile ID from config/profiles/ (e.g. 'adrd', 'full_catalog'). "
+            "Legacy aliases 'default' → adrd and 'full-catalog' → full_catalog are accepted. "
+            "Use 'orchestrate' to run all discovered profiles in one command."
+        ),
     )
 
     transform = subparsers.add_parser(
@@ -66,6 +75,27 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Accept the latest run's structure as the new schema baseline.",
     )
+
+    orchestrate = subparsers.add_parser(
+        "orchestrate",
+        help=(
+            "Discover all indication profiles in config/profiles/ and run ingest + "
+            "transform for each. ingest_only profiles (e.g. full_catalog) are ingested "
+            "but not transformed."
+        ),
+    )
+    orchestrate.add_argument(
+        "--full-refresh",
+        action="store_true",
+        help="Force new ingestion snapshots for all profiles, ignoring incremental state.",
+    )
+    orchestrate.add_argument(
+        "--max-pages",
+        type=int,
+        default=None,
+        help="Optional page cap per profile (smoke test mode).",
+    )
+
     return parser
 
 
@@ -74,21 +104,20 @@ def main(argv: list[str] | None = None) -> int:
     log = setup_logging()
 
     if args.command == "ingest":
-        from src.config import load_config
         from src.ingest.extract_studies import run_ingestion
 
+        # Resolve profile_id, honouring legacy aliases.
+        raw_profile = args.profile
+        profile_id = _PROFILE_ALIASES.get(raw_profile, raw_profile)
+
         try:
-            config = (
-                load_config("config/full_catalog_config.yml")
-                if args.profile == "full-catalog"
-                else None
-            )
+            registry = get_registry()
+            indication_profile = registry.get(profile_id)
             manifest = run_ingestion(
                 condition=args.condition,
                 full_refresh=args.full_refresh,
                 max_pages=args.max_pages,
-                profile=args.profile,
-                config=config,
+                config=indication_profile,
             )
         except Exception as exc:
             log.error("Ingestion failed: {}", exc)
@@ -126,6 +155,49 @@ def main(argv: list[str] | None = None) -> int:
             build_report()
         except Exception as exc:
             log.error("Quality report failed: {}", exc)
+            return 1
+        return 0
+
+    if args.command == "orchestrate":
+        from src.ingest.extract_studies import run_ingestion
+        from src.quality.profiling import profile_run
+        from src.transform.build_silver_entities import run_transform
+
+        registry = get_registry()
+        profiles = registry.active()
+        log.info("Orchestrating {} profile(s): {}", len(profiles), [p.profile_id for p in profiles])
+
+        failed: list[str] = []
+        for indication_profile in profiles:
+            pid = indication_profile.profile_id
+            try:
+                log.info("→ [{}] ingesting…", pid)
+                manifest = run_ingestion(
+                    full_refresh=args.full_refresh,
+                    max_pages=args.max_pages,
+                    config=indication_profile,
+                )
+                if manifest.status == "failed":
+                    log.error("[{}] ingestion failed: {}", pid, manifest.error)
+                    failed.append(pid)
+                    continue
+
+                if indication_profile.ingest_only:
+                    log.info("→ [{}] ingest_only — skipping transform.", pid)
+                    continue
+
+                log.info("→ [{}] transforming…", pid)
+                processed = run_transform(profile=indication_profile)
+                for run_id in processed:
+                    profile_run(run_id)
+                log.info("→ [{}] done ({} run(s) transformed).", pid, len(processed))
+
+            except Exception as exc:
+                log.error("[{}] failed: {}", pid, exc)
+                failed.append(pid)
+
+        if failed:
+            log.error("Orchestrate finished with errors on: {}", failed)
             return 1
         return 0
 

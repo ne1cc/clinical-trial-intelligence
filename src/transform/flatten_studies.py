@@ -66,8 +66,16 @@ def flatten_study(
     snapshot_timestamp_utc: str,
     taxonomy: ConditionTaxonomy,
     geography: GeographyRules,
+    indication_profile_id: str = "adrd",
 ) -> dict[str, list[dict[str, Any]]]:
-    """One study → rows for each silver entity."""
+    """One study → rows for each silver entity.
+
+    Args:
+        indication_profile_id: Profile that produced this run. Written to every
+            silver entity row so the shared silver/gold tables can be filtered or
+            partitioned by indication. Defaults to "adrd" for backward compatibility
+            with callers that predate the profile system.
+    """
     protocol = study.get("protocolSection", {})
     identification = protocol.get("identificationModule", {})
     status = protocol.get("statusModule", {})
@@ -79,6 +87,7 @@ def flatten_study(
     source_json_hash = sha256_json(study)
     base = {
         "ingestion_run_id": ingestion_run_id,
+        "indication_profile_id": indication_profile_id,
         "nct_id": nct_id,
         "source_json_hash": source_json_hash,
     }
@@ -86,6 +95,7 @@ def flatten_study(
     phase_raw, phase_normalized = normalize_phases(design.get("phases"))
     trial = {
         "ingestion_run_id": ingestion_run_id,
+        "indication_profile_id": indication_profile_id,
         "snapshot_timestamp_utc": snapshot_timestamp_utc,
         "nct_id": nct_id,
         "brief_title": identification.get("briefTitle"),

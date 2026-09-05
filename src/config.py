@@ -73,7 +73,8 @@ class ProjectConfig(BaseModel):
 
 def load_config(config_path: str | Path | None = None) -> ProjectConfig:
     load_dotenv(project_root() / ".env")
-    path = Path(config_path or os.getenv("CTI_CONFIG_PATH", "config/project_config.yml"))
+    env_path = os.getenv("CTI_CONFIG_PATH", "config/project_config.yml")
+    path = Path(config_path if config_path is not None else env_path)
     if not path.is_absolute():
         path = project_root() / path
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))

@@ -201,10 +201,15 @@ def test_flatten_study_produces_all_entities():
     assert trial["has_results_flag"] is True
     assert trial["record_quality_flag"] == "ok"
     assert trial["source_json_hash"]
+    # Profile id defaults to "adrd" when not supplied
+    assert trial["indication_profile_id"] == "adrd"
 
     assert len(rows["silver_trial_conditions"]) == 2
     groups = {r["condition_group"] for r in rows["silver_trial_conditions"]}
     assert groups == {"alzheimers_disease", "mild_cognitive_impairment"}
+    # Profile id propagates to all child entities via base dict
+    for row in rows["silver_trial_conditions"]:
+        assert row["indication_profile_id"] == "adrd"
 
     assert len(rows["silver_trial_sponsors"]) == 2
     roles = {r["sponsor_role"] for r in rows["silver_trial_sponsors"]}

@@ -6,6 +6,10 @@ through repeated snapshot runs — every run saves unmodified page JSON under
 a unique ingestion_run_id, and downstream models compare snapshots.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from src.config import ProjectConfig, get_config
 from src.ingest.ctg_client import CTGClient
 from src.ingest.pagination import iter_pages
@@ -27,22 +31,43 @@ from src.utils.hashing import sha256_json
 from src.utils.logging import setup_logging
 from src.utils.paths import ensure_dir
 
+if TYPE_CHECKING:
+    from src.profiles import IndicationProfile
+
 
 def run_ingestion(
     condition: str | None = None,
     full_refresh: bool = False,
     max_pages: int | None = None,
     profile: str = "default",
-    config: ProjectConfig | None = None,
+    config: ProjectConfig | IndicationProfile | None = None,
 ) -> IngestionManifest:
+    """Run a bronze ingestion snapshot.
+
+    Args:
+        config: Either a raw ProjectConfig (legacy callers) or an IndicationProfile.
+                When an IndicationProfile is passed, the profile string arg is
+                ignored — the profile's id is used instead.
+    """
     log = setup_logging()
-    if profile == "full-catalog" and condition:
+
+    # Unwrap IndicationProfile if that's what we received.
+    # TYPE_CHECKING guard means we check duck-typing attribute to avoid
+    # circular imports at runtime.
+    if hasattr(config, "profile_id"):
+        profile = config.profile_id
+        cfg: ProjectConfig = config.config
+    elif isinstance(config, ProjectConfig):
+        cfg = config
+    else:
+        cfg = get_config()
+
+    if profile in ("full-catalog", "full_catalog") and condition:
         raise ValueError(
-            "The full-catalog profile snapshots all conditions worldwide and "
+            f"The {profile} profile snapshots all conditions worldwide and "
             f"cannot be combined with a condition filter (got {condition!r}); "
-            "use the default profile for condition-scoped ingestion."
+            "use a condition-scoped profile for condition-scoped ingestion."
         )
-    cfg = config or get_config()
     manifests_dir = cfg.paths.bronze_manifests
 
     with CTGClient(cfg.api) as client:
