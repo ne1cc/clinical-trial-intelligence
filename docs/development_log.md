@@ -557,6 +557,22 @@ The 8 skips are `tests/test_dashboard_smoke.py` marts-not-built skips —
 pre-existing behavior in a worktree without a built warehouse, unrelated
 to this change.
 
+### Live verification (2026-09-05 UTC, worktree `scale-more-records`)
+
+First real full-catalog run, executed after a 2-page capped smoke run
+(`--max-pages 2`, correctly marked `partial` and excluded from reuse):
+
+- Run `20260905T071910Z_774560b2`: **status `success`**, 602 pages,
+  **601,694 records** — exactly matching the API-reported
+  `total_count_reported` (`countTotal`); the final page carried the
+  remaining 694 studies; 0 quarantined; recorded params confirm only
+  `format` / `pageSize=1000` / `countTotal` (no scope filters).
+- Duration 5m56s (~0.6s per page); final `data/bronze_full_catalog/`
+  footprint **9.7 GB**, matching the ~9.6 GB projection from measured
+  page sizes (~16 MB/page).
+- Incremental reuse behaved as designed: the earlier partial smoke run
+  was not reused; the full run wrote a fresh `success` manifest.
+
 ### Decisions and rationale
 
 - **Bronze-only scope.** Silver/gold/dbt cannot consume this volume yet;
