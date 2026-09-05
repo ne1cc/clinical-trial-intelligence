@@ -45,8 +45,8 @@ Documentation snapshot: built and verified against the live warehouse of **2026-
 | Source | [ClinicalTrials.gov API v2](https://clinicaltrials.gov/data-api/api) (public, no key) |
 | Stack | Python 3.11+ · uv · DuckDB · dbt · Streamlit · Plotly · pytest · ruff |
 | Architecture | Local-first medallion: bronze JSON → silver Parquet → gold dbt marts |
-| Automated tests | **73 dbt data tests** + **47 pytest tests** — all green |
-| dbt resources | 30 models (8 staging views, 7 intermediate views, 15 mart tables) + 3 seeds |
+| Automated tests | **115 dbt data tests** + **162 pytest tests** — all green |
+| dbt resources | 32 models (8 staging views, 8 intermediate views, 16 mart tables) + 4 seeds |
 
 **Live warehouse figures (single snapshot, 2026-07-24):**
 
@@ -236,7 +236,7 @@ cti-dashboard/
 │   ├── components/               # data (cached queries), guardrails, filters
 │   └── pages/                    # 7 numbered pages (queue → trial explorer)
 │
-├── tests/                        # 47 pytest tests (unit + dashboard smoke)
+├── tests/                        # 162 pytest tests (unit + dashboard smoke)
 ├── docs/                         # 10 focused documents (see §19)
 ├── data/                         # git-ignored: bronze/ silver/ warehouse/ quarantine/
 └── reports/                      # generated data-quality report
