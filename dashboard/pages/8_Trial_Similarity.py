@@ -1,5 +1,7 @@
 """Trial Similarity Explorer — deterministic protocol comparability."""
 
+from typing import Any
+
 import pandas as pd
 import streamlit as st
 from components import data
@@ -53,7 +55,16 @@ if candidates.empty:
     st.stop()
 
 
-def _format_option(row) -> str:
+def _format_option(row: Any) -> str:
+    """Format a candidate trial row into a human-readable dropdown selection label.
+
+    Args:
+        row: Namedtuple row from candidate trials containing ``nct_id``, ``brief_title``,
+            and optional ``indication_profile_id``.
+
+    Returns:
+        str: Label formatted as ``{nct_id} — {brief_title} [{indication_profile_id}]``.
+    """
     ind_tag = (
         f" [{row.indication_profile_id}]"
         if len(indications) > 1

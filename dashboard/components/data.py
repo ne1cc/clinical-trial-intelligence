@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 import duckdb
 import pandas as pd
 import streamlit as st
@@ -9,16 +12,31 @@ import streamlit as st
 from src.config import get_config
 
 
-def warehouse_path():
+def warehouse_path() -> Path:
+    """Return the filesystem path to the DuckDB analytics warehouse.
+
+    Returns:
+        Path: Filesystem path to the DuckDB database file configured for the pipeline.
+    """
     return get_config().paths.duckdb
 
 
 @st.cache_resource
 def _connection() -> duckdb.DuckDBPyConnection:
+    """Open and cache a read-only DuckDB database connection.
+
+    Returns:
+        duckdb.DuckDBPyConnection: Read-only DuckDB connection handle.
+    """
     return duckdb.connect(str(warehouse_path()), read_only=True)
 
 
 def require_warehouse() -> None:
+    """Verify the DuckDB warehouse file exists, stopping execution if missing.
+
+    Displays a Streamlit error message with instructions to build the warehouse
+    and halts page rendering via ``st.stop()`` if the database is not found.
+    """
     if not warehouse_path().exists():
         st.error(
             "Warehouse not found. Build it first:\n\n"
@@ -28,6 +46,18 @@ def require_warehouse() -> None:
 
 
 def _materialize(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert PyArrow-backed data types in a DataFrame to standard pandas types.
+
+    DuckDB returns PyArrow-backed string and nullable integer columns which can
+    cause SIGSEGV crashes in Streamlit's dataframe renderer. Converts string
+    columns to ``object`` and nullable integer columns (`Int32`, `Int64`) to ``float64``.
+
+    Args:
+        df: DataFrame returned directly from DuckDB query execution.
+
+    Returns:
+        pd.DataFrame: Sanitized DataFrame safe for Streamlit visualization.
+    """
     # DuckDB returns PyArrow-backed string and nullable integer columns which
     # can cause SIGSEGV in Streamlit's dataframe renderer. Convert to standard
     # pandas object/float64 dtypes.
@@ -40,15 +70,43 @@ def _materialize(df: pd.DataFrame) -> pd.DataFrame:
 
 @st.cache_data(ttl=600)
 def query(sql: str) -> pd.DataFrame:
+    """Execute a read-only SQL query against DuckDB and return materialized results.
+
+    Results are cached for 10 minutes (TTL 600 seconds) in Streamlit cache.
+
+    Args:
+        sql: SQL query string to execute.
+
+    Returns:
+        pd.DataFrame: Query result DataFrame with sanitized data types.
+    """
     return _materialize(_connection().execute(sql).df())
 
 
 def priority_queue() -> pd.DataFrame:
+    """Fetch the feasibility priority queue mart ordered by priority rank.
+
+    Returns:
+        pd.DataFrame: Feasibility queue records containing trial keys, priority
+            scores, and ranking factors.
+    """
     return query("select * from main_marts.mart_feasibility_priority_queue order by priority_rank")
 
 
 @st.cache_data(ttl=600)
 def trial_similarity(nct_id: str) -> pd.DataFrame:
+    """Fetch pairwise trial similarity scores for a given index trial NCT ID.
+
+    Queries ``main_marts.mart_trial_similarity`` for candidate trials compared
+    against ``nct_id``, ordered by descending similarity score / ascending rank.
+
+    Args:
+        nct_id: ClinicalTrials.gov NCT identifier of the index trial (e.g. "NCT01234567").
+
+    Returns:
+        pd.DataFrame: Similarity records with similarity rank, composite score,
+            and component factor scores.
+    """
     return _materialize(
         _connection()
         .execute(
@@ -61,6 +119,15 @@ def trial_similarity(nct_id: str) -> pd.DataFrame:
 
 
 def recruiting_competition() -> pd.DataFrame:
+    """Fetch the latest recruiting competition metrics across indication segments.
+
+    Filters for records matching the latest available snapshot date in
+    ``main_marts.mart_recruiting_competition``.
+
+    Returns:
+        pd.DataFrame: Active recruiting competition indicators by geographic and
+            indication segment.
+    """
     return query(
         "select * from main_marts.mart_recruiting_competition "
         "where snapshot_date = (select max(snapshot_date) "
@@ -69,10 +136,24 @@ def recruiting_competition() -> pd.DataFrame:
 
 
 def condition_geography_trends() -> pd.DataFrame:
+    """Fetch longitudinal condition and geography trend metrics ordered by month.
+
+    Returns:
+        pd.DataFrame: Historical trend records from
+            ``main_marts.mart_condition_geography_trends`` ordered by ``activity_month``.
+    """
     return query("select * from main_marts.mart_condition_geography_trends order by activity_month")
 
 
 def site_overlap() -> pd.DataFrame:
+    """Fetch trial site overlap metrics for the latest snapshot date.
+
+    Queries ``main_marts.mart_site_overlap`` for facility co-location and trial
+    congestion, ordered by recruiting trial count and listed trial count descending.
+
+    Returns:
+        pd.DataFrame: Facility site overlap records for the latest snapshot.
+    """
     return query(
         "select * from main_marts.mart_site_overlap "
         "where snapshot_date = (select max(snapshot_date) from main_marts.mart_site_overlap) "
@@ -81,6 +162,15 @@ def site_overlap() -> pd.DataFrame:
 
 
 def sponsor_landscape() -> pd.DataFrame:
+    """Aggregate active recruiting trial counts and phase mix by lead sponsor.
+
+    Queries ``main_marts.dim_trial`` and ``main_marts.bridge_trial_sponsor`` for
+    recruiting trials, returning sponsor organization classification and phase breakdown.
+
+    Returns:
+        pd.DataFrame: Summary DataFrame with columns ``lead_sponsor``,
+            ``sponsor_class``, ``recruiting_trial_count``, and ``phase_mix``.
+    """
     return query(
         """
         select
@@ -99,6 +189,16 @@ def sponsor_landscape() -> pd.DataFrame:
 
 
 def trial_explorer() -> pd.DataFrame:
+    """Fetch denormalized trial registry records and active site states for browsing.
+
+    Combines ``dim_trial`` with active US site states from ``fct_trial_site``
+    for the latest snapshot date.
+
+    Returns:
+        pd.DataFrame: Trial records containing NCT ID, indication profile ID,
+            brief title, overall status, phase, lead sponsor, post date, enrollment,
+            and comma-delimited US state locations.
+    """
     return query(
         """
         select
@@ -126,7 +226,15 @@ def trial_explorer() -> pd.DataFrame:
 
 @st.cache_data(ttl=600)
 def get_indication_profiles() -> list[dict[str, str]]:
-    """Return available indication profiles present in dim_trial."""
+    """Return available indication profiles present in dim_trial.
+
+    Discovers distinct indication profile IDs populated in ``main_marts.dim_trial``
+    and resolves their human-readable display names from the profile registry.
+
+    Returns:
+        list[dict[str, str]]: List of dictionaries with keys ``id`` (e.g. "adrd")
+            and ``display_name`` (e.g. "Alzheimer's Disease & ADRD").
+    """
     df = query(
         "select distinct indication_profile_id from main_marts.dim_trial "
         "where indication_profile_id is not null order by 1"
@@ -152,13 +260,30 @@ def get_indication_profiles() -> list[dict[str, str]]:
 
 
 def data_reliability() -> pd.DataFrame:
+    """Fetch ingestion and data pipeline reliability metrics.
+
+    Returns:
+        pd.DataFrame: Reliability metrics from ``main_marts.mart_data_reliability``
+            ordered by snapshot date and ingestion run ID descending.
+    """
     return query(
         "select * from main_marts.mart_data_reliability "
         "order by snapshot_date desc, ingestion_run_id desc"
     )
 
 
-def overview_metrics() -> dict:
+def overview_metrics() -> dict[str, Any]:
+    """Compute high-level summary KPIs across trials, sites, and snapshot runs.
+
+    Returns:
+        dict: Mapping of metric keys to counts/dates:
+            - ``total_trials``: Total number of trials across indications.
+            - ``recruiting_trials``: Number of trials currently in 'RECRUITING' status.
+            - ``states_with_sites``: Distinct geographic states hosting trial sites.
+            - ``listed_facilities``: Distinct facility locations tracked.
+            - ``latest_snapshot``: Date of the most recent snapshot.
+            - ``snapshot_count``: Total number of unique snapshot runs.
+    """
     row = query(
         """
         select
@@ -172,4 +297,4 @@ def overview_metrics() -> dict:
              from main_marts.fct_trial_snapshot) as snapshot_count
         """
     ).iloc[0]
-    return row.to_dict()
+    return {str(k): v for k, v in row.to_dict().items()}

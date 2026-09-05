@@ -2,7 +2,7 @@
 
 import argparse
 
-from src.profiles import get_registry
+from src.profiles import IndicationProfile, get_registry
 from src.utils.logging import setup_logging
 
 # Legacy profile name aliases kept for backward compatibility.
@@ -14,6 +14,14 @@ _PROFILE_ALIASES: dict[str, str] = {
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser with all pipeline subcommands.
+
+    Configures argument definitions and flags for the four core subcommands:
+    ``ingest``, ``transform``, ``quality-report``, and ``orchestrate``.
+
+    Returns:
+        argparse.ArgumentParser: Configured argument parser for the pipeline CLI.
+    """
     parser = argparse.ArgumentParser(
         prog="python -m src.cli",
         description=(
@@ -115,8 +123,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Execute the pipeline CLI command specified by command-line arguments.
+
+    Dispatches to the appropriate pipeline subroutines for ingestion, transformation,
+    data quality reporting, or multi-profile orchestration based on parsed arguments.
+
+    Args:
+        argv: Command-line argument vector to parse. If None, arguments are read
+            from sys.argv.
+
+    Returns:
+        int: Exit code (0 for success, non-zero for errors or failed runs).
+
+    Raises:
+        SystemExit: When invalid CLI arguments are provided to the parser.
+    """
     args = build_parser().parse_args(argv)
     log = setup_logging()
+    indication_profile: IndicationProfile | None = None
 
     if args.command == "ingest":
         from src.ingest.extract_studies import run_ingestion
@@ -150,7 +174,6 @@ def main(argv: list[str] | None = None) -> int:
         try:
             if profile_id == "full_catalog":
                 config = load_config("config/full_catalog_config.yml")
-                indication_profile = None
                 profile_cfg = config
             elif raw_profile == "default":
                 config = None
