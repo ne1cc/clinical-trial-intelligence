@@ -186,7 +186,7 @@ flowchart TB
 ## 4. Repository layout
 
 ```
-clinical-trial-intelligence/
+cti-dashboard/
 ├── Makefile                      # reproducible entry points (make help)
 ├── pyproject.toml                # uv-managed dependencies + tool config
 ├── README.md                     # front-door documentation
@@ -659,8 +659,8 @@ the DuckDB file — stop the server before running `make test`.
 ### First-time setup
 
 ```bash
-git clone <repo-url> clinical-trial-intelligence
-cd clinical-trial-intelligence
+git clone <repo-url> cti-dashboard
+cd cti-dashboard
 make setup            # uv sync, .env, data/ directories
 ```
 

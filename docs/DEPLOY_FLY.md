@@ -23,8 +23,8 @@ project's weekly-snapshot design (`config/project_config.yml`'s
 # Install the Fly CLI if you haven't: https://fly.io/docs/flyctl/install/
 fly auth login
 
-# Create the app from fly.toml (rename the `app =` line first if
-# "clinical-trial-intelligence" is already taken on Fly).
+# Create the app from fly.toml (app = "cti-dashboard"; rename that line
+# first if the name is already taken on Fly).
 fly launch --no-deploy
 
 # Create the persistent volume fly.toml expects. 1GB comfortably fits the

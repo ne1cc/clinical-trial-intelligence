@@ -1,4 +1,4 @@
-app = "clinical-trial-intelligence"
+app = "cti-dashboard"
 primary_region = "iad"
 
 [build]

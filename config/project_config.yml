@@ -14,7 +14,7 @@
 # ============================================================
 
 project:
-  name: clinical-trial-intelligence
+  name: cti-dashboard
   description: >-
     Public-registry-based feasibility prioritization for clinical operations.
     Signals only — not a recruitment forecast and not clinical decision support.

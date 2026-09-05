@@ -1,6 +1,6 @@
 # Clinical Trial Access & Feasibility Intelligence
 
-[![CI](https://github.com/ne1cc/clinical-trial-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/ne1cc/clinical-trial-intelligence/actions/workflows/ci.yml)
+[![CI](https://github.com/ne1cc/cti-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/ne1cc/cti-dashboard/actions/workflows/ci.yml)
 
 Over 80% of clinical trials miss their initial enrollment deadlines, largely because sponsors pick trial sites already overcrowded with competing studies for the same patient pool.
 
@@ -80,8 +80,8 @@ erDiagram
 Prerequisites: Python 3.11+, [uv](https://docs.astral.sh/uv/), `make`.
 
 ```bash
-git clone <your-repo-url> clinical-trial-intelligence
-cd clinical-trial-intelligence
+git clone <your-repo-url> cti-dashboard
+cd cti-dashboard
 make setup
 ```
 

@@ -15,7 +15,7 @@ import requests
 from src.config import ApiConfig
 from src.ingest.retry_policy import RetryableHTTPStatusError, build_retryer
 
-USER_AGENT = "clinical-trial-intelligence/0.1 (local-first analytics portfolio)"
+USER_AGENT = "cti-dashboard/0.1 (local-first analytics portfolio)"
 
 
 class CTGClient:

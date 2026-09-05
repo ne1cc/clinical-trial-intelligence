@@ -1,5 +1,5 @@
 [project]
-name = "clinical-trial-intelligence"
+name = "cti-dashboard"
 version = "0.1.0"
 description = "Clinical Trial Access & Recruitment Competition Intelligence — a local-first analytics platform over public ClinicalTrials.gov registry data."
 readme = "README.md"
