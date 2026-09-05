@@ -107,6 +107,8 @@ def flatten_study(
         "phase_normalized": phase_normalized,
         "enrollment_count": dig(design, "enrollmentInfo", "count"),
         "enrollment_type": dig(design, "enrollmentInfo", "type"),
+        "allocation": dig(design, "designInfo", "allocation"),
+        "primary_purpose": dig(design, "designInfo", "primaryPurpose"),
         "lead_sponsor_name": dig(sponsors_module, "leadSponsor", "name"),
         "responsible_party_type": dig(sponsors_module, "responsibleParty", "type"),
         "healthy_volunteers": eligibility.get("healthyVolunteers"),

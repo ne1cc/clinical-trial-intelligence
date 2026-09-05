@@ -29,6 +29,8 @@ select
     phase_normalized,
     try_cast(enrollment_count as integer) as enrollment_count,
     enrollment_type,
+    allocation,
+    primary_purpose,
     lead_sponsor_name,
     {{ normalize_text('lead_sponsor_name') }} as lead_sponsor_normalized,
     responsible_party_type,

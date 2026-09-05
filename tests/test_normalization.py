@@ -142,6 +142,10 @@ FIXTURE_STUDY = {
         "designModule": {
             "studyType": "INTERVENTIONAL",
             "phases": ["PHASE2", "PHASE3"],
+            "designInfo": {
+                "allocation": "RANDOMIZED",
+                "primaryPurpose": "TREATMENT",
+            },
             "enrollmentInfo": {"count": 300, "type": "ESTIMATED"},
         },
         "conditionsModule": {"conditions": ["Alzheimer Disease", "Mild Cognitive Impairment"]},
@@ -191,6 +195,8 @@ def test_flatten_study_produces_all_entities():
     assert trial["overall_status"] == "RECRUITING"
     assert trial["phase_normalized"] == "PHASE2/PHASE3"
     assert trial["enrollment_count"] == 300
+    assert trial["allocation"] == "RANDOMIZED"
+    assert trial["primary_purpose"] == "TREATMENT"
     assert trial["lead_sponsor_name"] == "Acme Pharma, Inc."
     assert trial["has_results_flag"] is True
     assert trial["record_quality_flag"] == "ok"

@@ -139,6 +139,22 @@ collection. This is documented, not hidden.
 
 ## 6. Scaling path (roadmap, not MVP)
 
+- **Full-catalog bronze ingestion (implemented, opt-in).** `config/full_catalog_config.yml`
+  drops the `query.cond`/`filter.*` params entirely and runs against a parallel
+  `data/bronze_full_catalog/` tree (`make ingest-full-catalog`), snapshotting the
+  entire ClinicalTrials.gov registry (~600k+ studies) instead of just ADRD/US. It
+  shares every ingestion primitive with the default profile (`iter_pages`,
+  `CTGClient`, manifest/reuse logic) — only the config differs — and is invisible
+  to the default `make transform`/`dbt-run`/dashboard, since those only ever read
+  `data/bronze/manifests/`. This is explicitly a precursor: silver/gold/dbt can't
+  consume this volume yet because `build_silver_entities.py` materializes an
+  entire run in pandas before writing Parquet. That's the next planned phase
+  (below), which is what will eventually let this data reach the marts.
+- Chunked/partitioned silver-layer transform (planned): stream and batch-write
+  `build_silver_entities.py`/`export_parquet.py` instead of materializing a full
+  run in memory, so the full-catalog bronze data above can be transformed without
+  an OOM risk; likely paired with extending `condition_taxonomy.yml` and
+  `geography_rules.yml` beyond their current ADRD/US-only scope.
 - Swap dbt-duckdb profile for BigQuery/Snowflake; models are ANSI-leaning by design.
 - Wrap CLI stages as Dagster/Airflow tasks keyed by `ingestion_run_id`.
 - Add ACS population and CDC/ATSDR SVI layers only after the ClinicalTrials.gov-only

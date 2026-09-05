@@ -22,8 +22,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--profile",
         "--module",
         dest="profile",
-        default=None,
-        help="Indication profile/module (e.g. 'adrd', 'oncology_nsclc'). Defaults to adrd.",
+        default="default",
+        help="Ingestion profile: 'full-catalog' fetches all conditions worldwide "
+        "into a separate bronze tree (config/full_catalog_config.yml); any other "
+        "value selects an indication profile/module (e.g. 'adrd', 'oncology_nsclc'); "
+        "'default' uses the configured default indication profile.",
     )
     ingest.add_argument(
         "--condition",
@@ -80,14 +83,21 @@ def main(argv: list[str] | None = None) -> int:
     log = setup_logging()
 
     if args.command == "ingest":
+        from src.config import load_config
         from src.ingest.extract_studies import run_ingestion
 
         try:
+            config = (
+                load_config("config/full_catalog_config.yml")
+                if args.profile == "full-catalog"
+                else None
+            )
             manifest = run_ingestion(
                 condition=args.condition,
                 profile=args.profile,
                 full_refresh=args.full_refresh,
                 max_pages=args.max_pages,
+                config=config,
             )
         except Exception as exc:
             log.error("Ingestion failed: {}", exc)

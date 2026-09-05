@@ -20,10 +20,13 @@ top-10 queue preview, "how to read this dashboard". Link to the full
 queue.
 
 ### 1 · Priority Queue
-Band KPIs (priority_review / review / watch), proxy warning when growth
-uses the registry-date fallback, full ranked table (score, band,
-components, deterministic explanation), horizontal stacked bar of
-normalized *unweighted* components for the top 15, interpretation note.
+Band KPIs (priority_review / review / watch), priority band sidebar
+multiselect with dynamic row-count reconciliation caption, proxy warning
+when growth uses the registry-date fallback, interactive selectable ranked
+table (click a row to inspect its exact weighted score breakdown), CSV
+export button with full decision-brief columns and embedded guardrail
+notes, horizontal stacked bar of normalized *unweighted* components for
+the top 15, interpretation note.
 
 ### 2 · Competition Landscape
 Latest-snapshot segments: density vs sponsor-HHI scatter (bubble = listed

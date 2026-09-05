@@ -36,6 +36,19 @@ def priority_queue() -> pd.DataFrame:
     return query("select * from main_marts.mart_feasibility_priority_queue order by priority_rank")
 
 
+@st.cache_data(ttl=600)
+def trial_similarity(nct_id: str) -> pd.DataFrame:
+    return (
+        _connection()
+        .execute(
+            "select * from main_marts.mart_trial_similarity"
+            " where nct_id_a = ? order by similarity_rank",
+            [nct_id],
+        )
+        .df()
+    )
+
+
 def recruiting_competition() -> pd.DataFrame:
     return query(
         "select * from main_marts.mart_recruiting_competition "

@@ -20,6 +20,7 @@ PAGES = [
     "dashboard/pages/5_Sponsor_Landscape.py",
     "dashboard/pages/6_Data_Reliability.py",
     "dashboard/pages/7_Trial_Explorer.py",
+    "dashboard/pages/8_Trial_Similarity.py",
 ]
 
 

@@ -46,6 +46,14 @@ def test_build_params_condition_override():
     assert params["query.cond"] == "Lewy Body Dementia"
 
 
+def test_build_params_full_catalog_profile_has_no_filters():
+    params = CTGClient(make_api(query_params={}, page_size=1000)).build_params()
+    assert "query.cond" not in params
+    assert "filter.overallStatus" not in params
+    assert "filter.advanced" not in params
+    assert params["pageSize"] == "1000"
+
+
 def test_fetch_page_returns_payload_and_raw_text(requests_mock):
     requests_mock.get(STUDIES, json={"studies": []})
     with CTGClient(make_api()) as client:

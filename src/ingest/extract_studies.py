@@ -30,7 +30,7 @@ from src.utils.paths import ensure_dir
 
 def run_ingestion(
     condition: str | None = None,
-    profile: str | None = None,
+    profile: str = "default",
     full_refresh: bool = False,
     max_pages: int | None = None,
     config: ProjectConfig | None = None,
@@ -40,24 +40,32 @@ def run_ingestion(
     manifests_dir = cfg.paths.bronze_manifests
 
     profile_obj = None
-    if profile:
-        profile_obj = load_indication_profile(profile)
-        if condition is None:
-            condition = profile_obj.query.condition
-    elif condition is None:
-        # Check if default profile is configured
-        default_prof = cfg.scope.get("default_indication_profile", "adrd")
-        try:
-            profile_obj = load_indication_profile(default_prof)
-            condition = profile_obj.query.condition
-        except Exception:
-            pass
+    if profile == "full-catalog":
+        if condition:
+            raise ValueError(
+                "The full-catalog profile snapshots all conditions worldwide and "
+                f"cannot be combined with a condition filter (got {condition!r}); "
+                "use the default profile for condition-scoped ingestion."
+            )
+    else:
+        if profile and profile != "default":
+            profile_obj = load_indication_profile(profile)
+            if condition is None:
+                condition = profile_obj.query.condition
+        elif condition is None:
+            # Resolve via the configured default indication profile
+            default_prof = cfg.scope.get("default_indication_profile", "adrd")
+            try:
+                profile_obj = load_indication_profile(default_prof)
+                condition = profile_obj.query.condition
+            except Exception:
+                pass
 
-    if condition is None:
-        raise ValueError(
-            "No condition query resolved: pass --condition or --profile, or ensure "
-            "the default indication profile exists under config/indications/."
-        )
+        if condition is None:
+            raise ValueError(
+                "No condition query resolved: pass --condition or --profile, or ensure "
+                "the default indication profile exists under config/indications/."
+            )
 
     with CTGClient(cfg.api) as client:
         params = client.build_params(condition=condition)
@@ -91,6 +99,7 @@ def run_ingestion(
             indication_profile=profile_obj.indication_id if profile_obj else None,
             params=params,
             mode="full_refresh" if full_refresh else "incremental",
+            profile=profile,
             status="running",
             started_at_utc=utc_now(),
         )
