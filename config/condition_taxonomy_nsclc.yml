@@ -1,0 +1,78 @@
+# ============================================================
+# Non-small cell lung cancer (NSCLC) condition taxonomy.
+# Version-controlled, deterministic mapping — no runtime LLM
+# classification. Referenced by config/profiles/oncology_nsclc.yml.
+#
+# Note on key naming: `dementia_relevance` is the ConditionTaxonomy
+# loader's generic per-group relevance flag (a legacy ADRD-era name;
+# the silver column is `dementia_relevance_flag`). It is false for
+# every NSCLC group because the flag drives ADRD-specific relevance
+# analytics; NSCLC grouping is carried entirely by condition_group.
+#
+# Groups are evaluated in order; first match wins (exact pass first,
+# then substring pass), so more specific groups come first.
+# ============================================================
+
+default:
+  condition_group: other_thoracic_oncology
+  dementia_relevance: false
+
+groups:
+  - condition_group: nsclc_adenocarcinoma
+    dementia_relevance: false
+    exact:
+      - lung adenocarcinoma
+      - adenocarcinoma of the lung
+      - non small cell lung adenocarcinoma
+    substrings:
+      - adenocarcinoma
+
+  - condition_group: nsclc_squamous
+    dementia_relevance: false
+    exact:
+      - squamous cell lung carcinoma
+      - squamous non small cell lung cancer
+    substrings:
+      - squamous
+
+  - condition_group: nsclc_large_cell
+    dementia_relevance: false
+    exact:
+      - large cell lung carcinoma
+    substrings:
+      - large cell
+
+  - condition_group: nsclc_biomarker_targeted
+    dementia_relevance: false
+    exact: []
+    substrings:
+      - egfr
+      - alk
+      - kras
+      - ros1
+      - braf
+      - pd-l1
+      - pdl1
+      - met exon
+      - ret fusion
+
+  - condition_group: nsclc_metastatic_advanced
+    dementia_relevance: false
+    exact:
+      - metastatic non-small cell lung cancer
+      - stage iv non-small cell lung cancer
+    substrings:
+      - metastatic
+      - stage iv
+      - advanced non small cell
+
+  - condition_group: nsclc_unspecified
+    dementia_relevance: false
+    exact:
+      - non-small cell lung cancer
+      - non small cell lung cancer
+      - nsclc
+    substrings:
+      - non-small cell
+      - non small cell
+      - nsclc

@@ -18,6 +18,9 @@ models:
         tests: [not_null]
       - name: ingestion_run_id
         tests: [not_null]
+      - name: indication_profile_id
+        description: Indication profile that produced this run (e.g. adrd, oncology_nsclc).
+        tests: [not_null]
       - name: source_json_hash
         tests: [not_null]
       - name: overall_status
