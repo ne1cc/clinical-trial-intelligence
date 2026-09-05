@@ -600,3 +600,126 @@ Chunked/partitioned silver transform (stream `build_silver_entities.py`
 and `export_parquet.py` batch-wise), then extend
 `condition_taxonomy.yml` / `geography_rules.yml` beyond ADRD/US so the
 full-catalog bronze data can reach the marts.
+
+## Phase 9 — Chunked silver transform (memory-bounded streaming) (2026-09-05)
+
+**Goal:** make the bronze→silver transform survive full-catalog volume.
+`build_silver_for_run` accumulated six lists of row-dicts for an entire run
+and `export_entity` materialized each entity into a pandas DataFrame before
+writing Parquet — at 601,694 studies (the live Phase 8 run) this OOMs or
+degrades severely. Profiling had the same problem one layer up
+(`pd.read_parquet` of the whole entity). This phase replaces both with
+bounded-memory streaming and wires `transform --profile full-catalog` so the
+Phase 8 bronze tree can finally reach silver.
+
+### Environment incident — worktree loss (recorded, not hidden)
+
+The `scale-more-records` worktree was **deleted from disk by an external
+process** after PR #5 merged (working tree was clean; nothing uncommitted
+was lost). The gitignored 9.7 GB full-catalog bronze run was lost with it —
+data, not code — so live verification in this phase re-ingests the catalog
+first. `origin/main` also advanced during the gap (PRs #7 and #9 from
+sibling sessions); this phase's branch `feat/chunked-silver-transform` is
+cut from fresh `origin/main` (`6831886`), and all touched files were
+re-verified against it before editing.
+
+### Step 9.1 — Design: fixed Arrow schemas + row-group streaming
+
+Two coupled problems had to be solved together:
+
+1. **Chunked writes are unsafe with inferred schemas.** pandas/Arrow
+   inference decides a column's type per chunk: an all-`None` chunk (e.g.
+   `last_known_status`, which is entirely null in real data) infers Arrow
+   `null`, and an int-only `enrollment_count` chunk infers `int64` — both
+   collide with the next flush. Fix: `ENTITY_ARROW_SCHEMAS`, one fixed
+   `pa.Schema` per entity, columns/order identical to `ENTITY_COLUMNS`.
+   Types mirror what inference produced on real silver files (verified in
+   Phase 8's live silver data): `enrollment_count`/`latitude`/`longitude`
+   → `float64` (int-or-null widens cleanly), `outcome_index` → `int64`,
+   six boolean flags → `bool`, everything else → `string`. Non-castable
+   values raise `ArrowInvalid` — fail fast, no silent coercion.
+2. **The silver contract is one file per entity per run**
+   (`run_id=<id>.parquet`), consumed by dbt's
+   `read_parquet('data/silver/{name}/*.parquet')`, `_already_transformed`,
+   and reconciliation. Fix: stream *row groups inside one file* rather
+   than sharding files. `SilverRunWriter` buffers rows per entity and
+   flushes a row group every `DEFAULT_FLUSH_ROWS = 50_000` rows
+   (per-entity threshold — locations/outcomes produce many rows per
+   study), writing snappy-compressed Parquet to
+   `run_id=<id>.parquet.tmp` and `os.replace`-ing it into place on
+   `close()`. A crashed run therefore never leaves a half-written file
+   for dbt globs or `_already_transformed` to pick up; `discard()`
+   removes staged files. Entities that receive no rows still get a
+   schema-only file via `schema.empty_table()` (preserves the empty-run
+   contract existing tests pin). `export_entity` keeps its exact
+   signature and delegates to a one-shot `SilverRunWriter`.
+
+`build_silver_for_run` keeps its structure and every semantic:
+run-global `seen_nct_ids` dedup (first occurrence wins), missing-NCT skip
+counting, dedup/skip warnings, per-entity "wrote N rows" logs, the
+`rows == record_count − duplicates − skips` reconciliation warning, plus a
+new progress line every 100k studies. On exception the writer is
+discarded and the error propagates. `FLUSH_ROWS` is a module-level alias
+of `DEFAULT_FLUSH_ROWS` so tests can shrink it.
+
+Profiling (`profile_entity`) became a single DuckDB streaming aggregate
+(`count(*)`, per-column `count(col)` null rates, `count(distinct nct_id)`)
+over the Parquet path — identical JSON output shape (`row_count`,
+`column_count`, `null_rates` rounded to 4 with `{}` for empty files,
+`distinct_nct_ids` only when the column exists), zero full materialization.
+
+CLI: the `transform` subcommand gains `--profile {default,full-catalog}`
+mirroring ingest, loading `config/full_catalog_config.yml` and passing the
+config to **both** `run_transform` and `profile_run`. The latter also fixes
+a latent bug present on `main`: the transform handler called
+`profile_run(run_id)` without config, which would have profiled the wrong
+(default-profile) tree under full-catalog mode. Added
+`make transform-full-catalog`.
+
+### Step 9.2 — Files changed
+
+- `src/transform/export_parquet.py` — `ENTITY_ARROW_SCHEMAS`,
+  `DEFAULT_FLUSH_ROWS`, `_table_from_rows`, `SilverRunWriter`;
+  `export_entity` → one-shot delegate (pandas dependency dropped).
+- `src/transform/build_silver_entities.py` — streaming accumulation via
+  `SilverRunWriter`; `FLUSH_ROWS`/`PROGRESS_EVERY` module knobs.
+- `src/quality/profiling.py` — DuckDB streaming `profile_entity`.
+- `src/cli.py` — `transform --profile` + config pass-through (fixes the
+  latent wrong-tree profiling bug).
+- `Makefile` — `transform-full-catalog` target.
+- Tests: `tests/test_export_parquet.py` (+6), new
+  `tests/test_build_silver.py` (3), `tests/test_quality.py` (+3),
+  `tests/test_cli.py` (+4).
+- Docs: `docs/architecture.md` §6 (chunked transform → implemented),
+  `README.md` §7a, `config/full_catalog_config.yml` scope comments.
+
+### Step 9.3 — Tests
+
+New coverage pins the contracts the streaming rewrite could silently
+break: schema names/order equal `ENTITY_COLUMNS`; 3 batches at
+`flush_rows=50` produce exactly 3 row groups / 150 rows; type stability
+across mixed chunks (int chunk then all-`None` chunk for the same columns,
+the exact pandas-inference killer); extra keys dropped with column order
+pinned; zero-row entities readable by DuckDB with exact column names;
+`discard()` leaves no final or `.tmp` files; dedup across a flush boundary
+(kept-first occurrence already flushed to disk, duplicate arrives two
+pages later, reconciliation invariant holds); records without NCT ID are
+skipped and counted; profiling on all-null / empty / no-`nct_id` files;
+and CLI `--profile` pass-through asserts the full-catalog config reaches
+both `run_transform` and `profile_run` (default profile passes `None` to
+both).
+
+### Verification (2026-09-05, worktree `feat-chunked-silver-transform`)
+
+| Check | Command | Result |
+|---|---|---|
+| Unit tests | `uv run pytest` | 82 passed, 9 skipped |
+| Lint | `uv run ruff check src tests dashboard` | clean |
+
+The 9 skips are the pre-existing `test_dashboard_smoke.py` marts-not-built
+skips, unrelated to this change.
+
+### Live verification
+
+To be appended below once the full-catalog re-ingestion + streaming
+transform run completes.

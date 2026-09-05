@@ -87,9 +87,15 @@ and cannot interfere with the default ADRD/US pipeline above. Combining
 `--condition` with this profile is rejected: the profile's scope is all
 conditions by definition.
 
-**Bronze only — not yet reflected in silver, gold, dbt marts, or the dashboard.**
-It's the first step toward scaling this project beyond a single therapeutic area;
-see [`docs/architecture.md`](docs/architecture.md) for the planned follow-on work.
+**Bronze + silver.** The opt-in streaming transform mirrors the ingest flag:
+`make transform-full-catalog` (or `python -m src.cli transform --profile
+full-catalog`) flattens the full-catalog bronze tree into
+`data/silver_full_catalog/` with bounded memory (chunked Parquet row groups, no
+full-run materialization) and writes per-run profile/reconciliation JSON. The
+default `make transform` still only reads `data/bronze/`. Gold, dbt marts, and
+the dashboard remain scoped to the default ADRD/US profile; see
+[`docs/architecture.md`](docs/architecture.md) for the remaining scaling work
+(extending the condition/geography rules beyond ADRD/US).
 
 ## 8. Setup instructions
 

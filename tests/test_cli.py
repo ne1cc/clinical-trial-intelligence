@@ -93,6 +93,65 @@ def test_cli_parser_transform():
     assert args.force is True
 
 
+def test_cli_parser_transform_profile_default():
+    parser = build_parser()
+    args = parser.parse_args(["transform"])
+    assert args.profile == "default"
+
+
+def test_cli_parser_transform_profile_full_catalog():
+    parser = build_parser()
+    args = parser.parse_args(["transform", "--profile", "full-catalog"])
+    assert args.profile == "full-catalog"
+
+
+def test_cli_main_transform_full_catalog_passes_config_to_transform_and_profile(monkeypatch):
+    transform_calls = []
+    profile_calls = []
+
+    def fake_run_transform(**kwargs):
+        transform_calls.append(kwargs)
+        return ["r1"]
+
+    def fake_profile_run(run_id, **kwargs):
+        profile_calls.append({"run_id": run_id, **kwargs})
+        return {}
+
+    monkeypatch.setattr("src.transform.build_silver_entities.run_transform", fake_run_transform)
+    monkeypatch.setattr("src.quality.profiling.profile_run", fake_profile_run)
+
+    exit_code = main(["transform", "--profile", "full-catalog"])
+
+    assert exit_code == 0
+    assert len(transform_calls) == 1
+    assert len(profile_calls) == 1
+    for captured in (*transform_calls, *profile_calls):
+        assert captured["config"] is not None
+        assert str(captured["config"].paths.silver).endswith("silver_full_catalog")
+
+
+def test_cli_main_transform_default_passes_no_config_override(monkeypatch):
+    transform_calls = []
+    profile_calls = []
+
+    def fake_run_transform(**kwargs):
+        transform_calls.append(kwargs)
+        return ["r1"]
+
+    def fake_profile_run(run_id, **kwargs):
+        profile_calls.append({"run_id": run_id, **kwargs})
+        return {}
+
+    monkeypatch.setattr("src.transform.build_silver_entities.run_transform", fake_run_transform)
+    monkeypatch.setattr("src.quality.profiling.profile_run", fake_profile_run)
+
+    exit_code = main(["transform"])
+
+    assert exit_code == 0
+    assert transform_calls[0]["config"] is None
+    assert profile_calls[0]["config"] is None
+
+
 def test_cli_parser_quality_report():
     parser = build_parser()
     args = parser.parse_args(["quality-report", "--update-schema-baseline"])
