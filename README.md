@@ -196,7 +196,7 @@ organization test whether a feasibility-review process could justify its cost us
 | [`docs/development_log.md`](docs/development_log.md) | complete step-by-step build record (Phases 1–7) |
 | [`docs/DEPLOY_STREAMLIT.md`](docs/DEPLOY_STREAMLIT.md) | deploy the dashboard to Streamlit Community Cloud |
 | [`docs/DEPLOY_FLY.md`](docs/DEPLOY_FLY.md) | deploy the dashboard to Fly.io with an auto-refreshing pipeline |
-| [`docs/roadmap.md`](docs/roadmap.md) | pre-planning: candidate features for the next phase of analytical work |
+| [`docs/competitive_positioning.md`](docs/competitive_positioning.md) | how CTI's free registry-only scope compares to Citeline/IQVIA/H1, and where that leaves room to grow |
 
 ## 23. Roadmap
 
