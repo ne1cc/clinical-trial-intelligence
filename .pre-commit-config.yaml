@@ -2,11 +2,18 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # data/ holds tracked generated artifacts (e.g. _schema_baseline.json);
+      # hygiene hooks must never rewrite them.
       - id: check-added-large-files
+        exclude: '^data/'
       - id: check-merge-conflict
+        exclude: '^data/'
       - id: check-yaml
+        exclude: '^data/'
       - id: end-of-file-fixer
+        exclude: '^data/'
       - id: trailing-whitespace
+        exclude: '^data/'
 
   - repo: local
     hooks:
