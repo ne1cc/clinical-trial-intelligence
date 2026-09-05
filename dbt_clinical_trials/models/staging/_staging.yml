@@ -10,6 +10,8 @@ models:
         tests:
           - accepted_values:
               values: [running, success, partial, failed]
+      - name: profile
+        description: Indication profile that produced the run (e.g. default, full-catalog); profile IDs are dynamic, so no accepted_values test.
 
   - name: stg_trials
     description: One row per NCT ID per ingestion run.
