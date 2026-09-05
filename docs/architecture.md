@@ -141,15 +141,21 @@ collection. This is documented, not hidden.
   shares every ingestion primitive with the default profile (`iter_pages`,
   `CTGClient`, manifest/reuse logic) — only the config differs — and is invisible
   to the default `make transform`/`dbt-run`/dashboard, since those only ever read
-  `data/bronze/manifests/`. This is explicitly a precursor: silver/gold/dbt can't
-  consume this volume yet because `build_silver_entities.py` materializes an
-  entire run in pandas before writing Parquet. That's the next planned phase
-  (below), which is what will eventually let this data reach the marts.
-- Chunked/partitioned silver-layer transform (planned): stream and batch-write
-  `build_silver_entities.py`/`export_parquet.py` instead of materializing a full
-  run in memory, so the full-catalog bronze data above can be transformed without
-  an OOM risk; likely paired with extending `condition_taxonomy.yml` and
-  `geography_rules.yml` beyond their current ADRD/US-only scope.
+  `data/bronze/manifests/`.
+- **Chunked silver transform (implemented).** `SilverRunWriter`
+  (`src/transform/export_parquet.py`) streams flattened rows into one Parquet
+  file per entity per run, flushing a row group every 50k rows against fixed
+  `ENTITY_ARROW_SCHEMAS` (pandas inference cannot survive chunking: an all-null
+  chunk would infer Arrow `null`), staging to `.tmp` and atomically renaming on
+  close. `build_silver_for_run` no longer materializes a full run in memory;
+  profiling (`src/quality/profiling.py`) is a single DuckDB streaming aggregate
+  instead of a full pandas re-read; and `transform --profile full-catalog`
+  (`make transform-full-catalog`) writes to `data/silver_full_catalog/` with
+  profile-JSON reconciliation, mirroring the ingest flag. Gold/dbt/dashboard
+  still read only the default-profile silver tree.
+- Extending `condition_taxonomy.yml` and `geography_rules.yml` beyond their
+  current ADRD/US-only scope (planned): the prerequisite before full-catalog
+  silver data is meaningful in the marts.
 - Swap dbt-duckdb profile for BigQuery/Snowflake; models are ANSI-leaning by design.
 - Wrap CLI stages as Dagster/Airflow tasks keyed by `ingestion_run_id`.
 - Add ACS population and CDC/ATSDR SVI layers only after the ClinicalTrials.gov-only

@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 from src.config import ProjectConfig, get_config
 from src.ingest.snapshot_manifest import IngestionManifest, load_manifests
-from src.transform.export_parquet import export_entity
+from src.transform.export_parquet import DEFAULT_FLUSH_ROWS, SilverRunWriter
 from src.transform.flatten_studies import flatten_study, iter_bronze_studies
 from src.transform.normalize_conditions import get_taxonomy
 from src.transform.normalize_locations import get_geography_rules
@@ -25,6 +25,10 @@ from src.utils.logging import setup_logging
 
 if TYPE_CHECKING:
     from src.profiles import IndicationProfile
+
+# Module-level so tests can shrink the buffer without writing 50k rows.
+FLUSH_ROWS = DEFAULT_FLUSH_ROWS
+PROGRESS_EVERY = 100_000
 
 ENTITY_NAMES = (
     "silver_trials",
@@ -60,34 +64,42 @@ def build_silver_for_run(
     profile_id = profile.profile_id if profile else "adrd"
     snapshot_ts = manifest.started_at_utc.isoformat()
 
-    collected: dict[str, list[dict]] = {name: [] for name in ENTITY_NAMES}
     # Dedup key is (nct_id, indication_profile_id): the same NCT ID can legitimately
     # appear in two different indication profiles (e.g. a trial listed under both
     # ADRD and Parkinson's). Only deduplicate within the same profile's run.
     seen_dedup_keys: set[tuple[str, str]] = set()
     duplicate_count = 0
     skipped_no_nct = 0
+    study_count = 0
 
-    for study in iter_bronze_studies(run_dir):
-        rows = flatten_study(
-            study,
-            run_id,
-            snapshot_ts,
-            taxonomy,
-            geography,
-            indication_profile_id=profile_id,
-        )
-        nct_id = rows["silver_trials"][0]["nct_id"]
-        if not nct_id:
-            skipped_no_nct += 1  # already quarantined at ingestion
-            continue
-        dedup_key = (nct_id, profile_id)
-        if dedup_key in seen_dedup_keys:
-            duplicate_count += 1
-            continue
-        seen_dedup_keys.add(dedup_key)
-        for entity, entity_rows in rows.items():
-            collected[entity].extend(entity_rows)
+    writer = SilverRunWriter(run_id, cfg.paths.silver, flush_rows=FLUSH_ROWS)
+    try:
+        for study in iter_bronze_studies(run_dir):
+            rows = flatten_study(
+                study,
+                run_id,
+                snapshot_ts,
+                taxonomy,
+                geography,
+                indication_profile_id=profile_id,
+            )
+            nct_id = rows["silver_trials"][0]["nct_id"]
+            if not nct_id:
+                skipped_no_nct += 1  # already quarantined at ingestion
+                continue
+            dedup_key = (nct_id, profile_id)
+            if dedup_key in seen_dedup_keys:
+                duplicate_count += 1
+                continue
+            seen_dedup_keys.add(dedup_key)
+            writer.add_rows(rows)
+            study_count += 1
+            if study_count % PROGRESS_EVERY == 0:
+                log.info("Run {}: {} studies streamed.", run_id, study_count)
+        counts = writer.close()
+    except BaseException:
+        writer.discard()
+        raise
 
     if duplicate_count:
         log.warning(
@@ -100,9 +112,9 @@ def build_silver_for_run(
 
     row_counts: dict[str, int] = {}
     for entity in ENTITY_NAMES:
-        path, count = export_entity(collected[entity], entity, run_id, cfg.paths.silver)
-        row_counts[entity] = count
-        log.info("Run {}: wrote {} rows -> {}", run_id, count, path)
+        path = cfg.paths.silver / entity / f"run_id={run_id}.parquet"
+        row_counts[entity] = counts[entity]
+        log.info("Run {}: wrote {} rows -> {}", run_id, counts[entity], path)
 
     expected = manifest.record_count - duplicate_count - skipped_no_nct
     if row_counts["silver_trials"] != expected:

@@ -65,6 +65,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Rebuild silver outputs even if they already exist.",
     )
+    transform.add_argument(
+        "--profile",
+        choices=["default", "full-catalog"],
+        default="default",
+        help="Scope profile to transform. 'full-catalog' reads data/bronze_full_catalog "
+        "and writes data/silver_full_catalog; it is additive and does not affect the "
+        "default ADRD/US pipeline.",
+    )
 
     quality = subparsers.add_parser(
         "quality-report",
@@ -125,13 +133,19 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if manifest.status in ("success", "partial") else 1
 
     if args.command == "transform":
+        from src.config import load_config
         from src.quality.profiling import profile_run
         from src.transform.build_silver_entities import run_transform
 
         try:
-            processed = run_transform(run_id=args.run_id, force=args.force)
+            config = (
+                load_config("config/full_catalog_config.yml")
+                if args.profile == "full-catalog"
+                else None
+            )
+            processed = run_transform(run_id=args.run_id, force=args.force, config=config)
             for run_id in processed:
-                profile_run(run_id)
+                profile_run(run_id, config=config)
         except Exception as exc:
             log.error("Transform failed: {}", exc)
             return 1
