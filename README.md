@@ -192,6 +192,8 @@ organization test whether a feasibility-review process could justify its cost us
 | [`docs/dashboard_spec.md`](docs/dashboard_spec.md) | page-by-page dashboard specification |
 | [`docs/executive_memo_template.md`](docs/executive_memo_template.md) | stakeholder memo template with live example figures |
 | [`docs/development_log.md`](docs/development_log.md) | complete step-by-step build record (Phases 1–7) |
+| [`docs/DEPLOY_STREAMLIT.md`](docs/DEPLOY_STREAMLIT.md) | deploy the dashboard to Streamlit Community Cloud |
+| [`docs/DEPLOY_FLY.md`](docs/DEPLOY_FLY.md) | deploy the dashboard to Fly.io with an auto-refreshing pipeline |
 
 ## 23. Roadmap
 

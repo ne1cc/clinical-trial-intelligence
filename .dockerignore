@@ -1,0 +1,13 @@
+.venv/
+.git/
+.env
+.env.*
+data/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+dbt_clinical_trials/target/
+dbt_clinical_trials/logs/
+dbt_clinical_trials/profiles.yml
+.superpowers/
