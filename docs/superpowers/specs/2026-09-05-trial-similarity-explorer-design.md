@@ -75,9 +75,11 @@ in the final model, so nothing wasteful is stored on disk.
 - `dbt_clinical_trials/models/staging/stg_trials.sql`: add `allocation`
   and `primary_purpose` passthrough columns from `silver_trials`.
 - Backfill by rerunning `make transform && make dbt-run` against
-  existing bronze. `data/bronze/_schema_baseline.json` (schema-drift
-  detection) will need its one-time refresh — an expected,
-  intentional change, not real drift.
+  existing bronze. `data/bronze/_schema_baseline.json` needs **no**
+  update: schema-drift detection (`src/quality/schema_drift.py`)
+  compares raw bronze JSON field paths, which are unchanged here — this
+  extends what silver *extracts* from fields already present in bronze,
+  not what the API returns.
 
 ## New dbt macro: `parse_age_years`
 
