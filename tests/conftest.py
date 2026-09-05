@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -52,3 +53,32 @@ def check_evaluation(result, check_name):
         if evaluation.check_name == check_name:
             return evaluation
     return None
+
+
+@pytest.fixture(scope="session")
+def dbt_manifest(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    root = Path(__file__).resolve().parents[1]
+    dbt_dir = root / "dbt_clinical_trials"
+    if not (dbt_dir / "profiles.yml").exists():
+        subprocess.run(
+            ["cp", str(dbt_dir / "profiles.yml.example"), str(dbt_dir / "profiles.yml")],
+            check=True,
+        )
+    if (dbt_dir / "packages.yml").exists():
+        subprocess.run(
+            ["uv", "run", "dbt", "deps", "--project-dir", str(dbt_dir),
+             "--profiles-dir", str(dbt_dir)],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+    subprocess.run(
+        ["uv", "run", "dbt", "parse", "--project-dir", str(dbt_dir),
+         "--profiles-dir", str(dbt_dir)],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    manifest = dbt_dir / "target" / "manifest.json"
+    assert manifest.exists(), "dbt parse did not produce target/manifest.json"
+    return manifest
