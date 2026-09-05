@@ -59,3 +59,21 @@ def test_profile_entity_without_nct_id(tmp_path: Path):
     assert prof["column_count"] == 1
     assert prof["null_rates"]["a"] == 0.5
     assert "distinct_nct_ids" not in prof
+
+
+def test_profile_entity_escapes_column_names_from_the_file_schema(tmp_path: Path):
+    # Column names are read back out of the parquet schema and interpolated
+    # into the aggregate list, so an embedded quote must not break the query.
+    parquet_path = tmp_path / "entity.parquet"
+    pd.DataFrame({"nct_id": ["NCT00000001", "NCT00000002"], 'we"ird': [1, None]}).to_parquet(
+        parquet_path, index=False
+    )
+    prof = profile_entity(parquet_path)
+    assert prof["row_count"] == 2
+    assert prof["null_rates"]['we"ird'] == 0.5
+
+
+def test_profile_entity_accepts_a_path_containing_a_quote(tmp_path: Path):
+    parquet_path = tmp_path / "run_id=it's.parquet"
+    pd.DataFrame([{"nct_id": "NCT00000001"}]).to_parquet(parquet_path, index=False)
+    assert profile_entity(parquet_path)["row_count"] == 1

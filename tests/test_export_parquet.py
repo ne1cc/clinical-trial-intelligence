@@ -4,7 +4,9 @@ import duckdb
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 
+from src.transform.build_silver_entities import ENTITY_NAMES
 from src.transform.export_parquet import (
     ENTITY_ARROW_SCHEMAS,
     ENTITY_COLUMNS,
@@ -38,6 +40,24 @@ def test_export_entity_empty_rows_creates_valid_parquet_for_duckdb(tmp_path: Pat
 def test_entity_arrow_schemas_match_entity_columns():
     for entity, columns in ENTITY_COLUMNS.items():
         assert ENTITY_ARROW_SCHEMAS[entity].names == columns
+
+
+def test_entity_names_cover_every_exported_entity():
+    # build_silver_for_run logs and returns counts[entity] for each ENTITY_NAMES
+    # entry, so an entity in one list but not the other surfaces only as a
+    # KeyError at the end of a multi-hour full-catalog run.
+    assert set(ENTITY_NAMES) == set(ENTITY_COLUMNS)
+
+
+def test_writer_rejects_a_number_in_a_string_column(tmp_path: Path):
+    # Columns absent from _NON_STRING_ARROW_TYPES are pinned to string, and
+    # PyArrow refuses to coerce an int into one rather than silently widening
+    # the schema. The whole fixed-schema design rests on that failing loudly.
+    writer = SilverRunWriter("r1", tmp_path, flush_rows=1)
+    with pytest.raises(pa.ArrowTypeError):
+        writer.add_rows({"silver_trial_locations": [{"zip_code": 2114}]})
+    writer.discard()
+    assert list((tmp_path / "silver_trial_locations").glob("*.parquet*")) == []
 
 
 def test_writer_flushes_one_row_group_per_threshold(tmp_path: Path):

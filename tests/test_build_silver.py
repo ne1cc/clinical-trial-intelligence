@@ -4,10 +4,13 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 import pyarrow.parquet as pq
+import pytest
 
 from src.config import ApiConfig, IngestionConfig, PathsConfig, ProjectConfig
-from src.ingest.snapshot_manifest import IngestionManifest
-from src.transform.build_silver_entities import build_silver_for_run
+from src.ingest.snapshot_manifest import IngestionManifest, write_manifest
+from src.quality.profiling import profile_run
+from src.transform import build_silver_entities
+from src.transform.build_silver_entities import _already_transformed, build_silver_for_run
 from src.transform.export_parquet import ENTITY_COLUMNS
 from src.utils.dates import utc_now
 
@@ -100,6 +103,57 @@ def test_build_silver_skips_records_without_nct_id(tmp_path: Path):
     assert row_counts["silver_trials"] == 1
     path = cfg.paths.silver / "silver_trials" / f"run_id={run_id}.parquet"
     assert pd.read_parquet(path)["nct_id"].tolist() == ["NCT00000001"]
+
+
+def test_build_silver_publishes_nothing_when_a_study_raises(tmp_path: Path, monkeypatch):
+    cfg = make_config(tmp_path)
+    run_id = "r_fail"
+    run_dir = cfg.paths.bronze_api_responses / f"run_id={run_id}"
+    write_bronze_page(run_dir, 1, [make_study(f"NCT{i:08d}") for i in range(1, 6)])
+    # Flush on every row so a tmp file definitely exists before the failure.
+    monkeypatch.setattr(build_silver_entities, "FLUSH_ROWS", 1)
+
+    real_flatten = build_silver_entities.flatten_study
+
+    def explode_on_third(study, *args, **kwargs):
+        rows = real_flatten(study, *args, **kwargs)
+        if rows["silver_trials"][0]["nct_id"] == "NCT00000003":
+            raise RuntimeError("flatten blew up")
+        return rows
+
+    monkeypatch.setattr(build_silver_entities, "flatten_study", explode_on_third)
+    with pytest.raises(RuntimeError, match="flatten blew up"):
+        build_silver_for_run(make_manifest(run_id, record_count=5), cfg)
+
+    assert list(cfg.paths.silver.glob(f"*/run_id={run_id}.parquet")) == []
+    assert list(cfg.paths.silver.glob("*/run_id=*.parquet.tmp")) == []
+    assert not _already_transformed(cfg, run_id)
+
+    monkeypatch.setattr(build_silver_entities, "flatten_study", real_flatten)
+    counts = build_silver_for_run(make_manifest(run_id, record_count=5), cfg)
+    assert counts["silver_trials"] == 5
+    assert _already_transformed(cfg, run_id)
+
+
+def test_profile_run_treats_dedup_shortfall_as_expected(tmp_path: Path, monkeypatch):
+    cfg = make_config(tmp_path)
+    run_id = "r_recon"
+    run_dir = cfg.paths.bronze_api_responses / f"run_id={run_id}"
+    write_bronze_page(run_dir, 1, [make_study("NCT00000001"), make_study("NCT00000002")])
+    write_bronze_page(run_dir, 2, [make_study("NCT00000002")])
+    monkeypatch.setattr(build_silver_entities, "FLUSH_ROWS", 1)
+    build_silver_for_run(make_manifest(run_id, record_count=3), cfg)
+
+    cfg.paths.bronze_manifests.mkdir(parents=True, exist_ok=True)
+    write_manifest(cfg.paths.bronze_manifests, make_manifest(run_id, record_count=3))
+    report = profile_run(run_id, config=cfg)
+
+    recon = report["reconciliation"]
+    assert recon["manifest_record_count"] == 3
+    assert recon["silver_trials_row_count"] == 2
+    assert recon["excluded_records"] == 1
+    assert recon["no_unexpected_loss"] is True
+    assert recon["nct_ids_unique"] is True
 
 
 def pq_num_row_groups(path: Path) -> int:

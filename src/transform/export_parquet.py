@@ -132,10 +132,7 @@ DEFAULT_FLUSH_ROWS = 50_000
 def _table_from_rows(rows: list[dict[str, Any]], schema: pa.Schema) -> pa.Table:
     # row.get: missing keys become null, matching the previous pandas
     # behaviour; extra keys are dropped instead of widening the schema.
-    arrays = [
-        pa.array([row.get(field.name) for row in rows], type=field.type)
-        for field in schema
-    ]
+    arrays = [pa.array([row.get(field.name) for row in rows], type=field.type) for field in schema]
     return pa.Table.from_arrays(arrays, schema=schema)
 
 
@@ -154,9 +151,7 @@ class SilverRunWriter:
         self.silver_dir = silver_dir
         self.flush_rows = flush_rows
         self.row_counts: dict[str, int] = {name: 0 for name in ENTITY_ARROW_SCHEMAS}
-        self._buffers: dict[str, list[dict[str, Any]]] = {
-            name: [] for name in ENTITY_ARROW_SCHEMAS
-        }
+        self._buffers: dict[str, list[dict[str, Any]]] = {name: [] for name in ENTITY_ARROW_SCHEMAS}
         self._writers: dict[str, pq.ParquetWriter] = {}
         self._tmp_paths: dict[str, Path] = {}
         self._closed = False

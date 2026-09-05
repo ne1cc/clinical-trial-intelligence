@@ -14,20 +14,30 @@ from src.utils.logging import setup_logging
 from src.utils.paths import ensure_dir
 
 
+def _quote(identifier: str) -> str:
+    # Column names come from the parquet file's own schema, so they are data
+    # and not SQL: an unescaped embedded quote closes the literal early and
+    # DuckDB raises ParserException.
+    return '"' + identifier.replace('"', '""') + '"'
+
+
 def profile_entity(path: Path) -> dict:
     # Single streaming aggregate over the parquet file: profiling must not
     # materialize full-catalog entity tables (hundreds of millions of rows
     # for locations/outcomes) in memory.
-    table = f"read_parquet('{path.as_posix()}')"
+    source = path.as_posix()
     con = duckdb.connect(":memory:")
     try:
         columns = [
-            row[0] for row in con.execute(f"describe select * from {table}").fetchall()
+            row[0]
+            for row in con.execute("describe select * from read_parquet(?)", [source]).fetchall()
         ]
-        aggregates = ["count(*)"] + [f'count("{col}")' for col in columns]
+        aggregates = ["count(*)"] + [f"count({_quote(col)})" for col in columns]
         if "nct_id" in columns:
-            aggregates.append('count(distinct "nct_id")')
-        stats = con.execute(f"select {', '.join(aggregates)} from {table}").fetchone()
+            aggregates.append(f"count(distinct {_quote('nct_id')})")
+        stats = con.execute(
+            f"select {', '.join(aggregates)} from read_parquet(?)", [source]
+        ).fetchone()
     finally:
         con.close()
 
@@ -69,12 +79,18 @@ def profile_run(run_id: str, config: ProjectConfig | None = None) -> dict:
     )
     trials = report["entities"].get("silver_trials", {})
     if manifest and "row_count" in trials:
+        rows = trials["row_count"]
+        # A shortfall against the manifest is expected: build_silver_for_run
+        # keeps the first occurrence of a repeated NCT ID and drops records
+        # without one. Only losing *more* than bronze holds, or emitting a
+        # repeated NCT ID, indicates a real problem.
         report["reconciliation"] = {
             "manifest_record_count": manifest.record_count,
-            "silver_trials_row_count": trials["row_count"],
+            "silver_trials_row_count": rows,
             "distinct_nct_ids": trials.get("distinct_nct_ids"),
-            "counts_match": manifest.record_count == trials["row_count"],
-            "nct_ids_unique": trials.get("distinct_nct_ids") == trials["row_count"],
+            "excluded_records": manifest.record_count - rows,
+            "no_unexpected_loss": rows <= manifest.record_count,
+            "nct_ids_unique": trials.get("distinct_nct_ids") == rows,
         }
 
     profiles_dir = ensure_dir(cfg.paths.silver / "_profiles")
