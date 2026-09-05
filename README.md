@@ -1,6 +1,6 @@
 # Clinical Trial Access & Feasibility Intelligence
 
-[![CI](https://github.com/n1ecC/clinical-trial-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/n1ecC/clinical-trial-intelligence/actions/workflows/ci.yml)
+[![CI](https://github.com/ne1cc/clinical-trial-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/ne1cc/clinical-trial-intelligence/actions/workflows/ci.yml)
 
 Over 80% of clinical trials miss their initial enrollment deadlines, largely because sponsors pick trial sites already overcrowded with competing studies for the same patient pool.
 
