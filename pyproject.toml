@@ -24,6 +24,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "mypy>=1.11",
+    "pandas-stubs>=2.2",
     "pytest>=8.2",
     "pytest-cov>=5.0",
     "requests-mock>=1.12",
@@ -52,3 +54,8 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/orchestration", "src/ingest", "src/utils", "src/quality"]
+strict = true

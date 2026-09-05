@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 import duckdb
 from loguru import logger
@@ -32,7 +33,7 @@ def _fmt(value: object) -> str:
     return str(value)
 
 
-def _reliability_rows(cfg: ProjectConfig) -> list[dict]:
+def _reliability_rows(cfg: ProjectConfig) -> list[dict[str, Any]]:
     if not cfg.paths.duckdb.exists():
         return []
     con = duckdb.connect(str(cfg.paths.duckdb), read_only=True)

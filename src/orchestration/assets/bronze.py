@@ -20,7 +20,7 @@ class IngestParams(Config):
 )
 def ctg_raw_pages(
     context: AssetExecutionContext, config: IngestParams
-) -> MaterializeResult:
+) -> MaterializeResult[None]:
     manifest = run_ingestion(
         condition=config.condition,
         full_refresh=config.full_refresh,

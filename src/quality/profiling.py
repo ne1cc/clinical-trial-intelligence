@@ -3,6 +3,7 @@ reconciliation of trial rows against the ingestion manifest."""
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -14,7 +15,7 @@ from src.utils.logging import setup_logging
 from src.utils.paths import ensure_dir
 
 
-def profile_entity(path: Path) -> dict:
+def profile_entity(path: Path) -> dict[str, Any]:
     frame = pd.read_parquet(path)
     null_rates = {} if frame.empty else (frame.isna().mean().round(4)).to_dict()
     profile = {
@@ -27,10 +28,10 @@ def profile_entity(path: Path) -> dict:
     return profile
 
 
-def profile_run(run_id: str, config: ProjectConfig | None = None) -> dict:
+def profile_run(run_id: str, config: ProjectConfig | None = None) -> dict[str, Any]:
     log = setup_logging()
     cfg = config or get_config()
-    report: dict = {
+    report: dict[str, Any] = {
         "ingestion_run_id": run_id,
         "profiled_at_utc": utc_now_iso(),
         "entities": {},

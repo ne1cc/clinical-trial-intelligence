@@ -37,6 +37,6 @@ def clinical_trials_dbt_assets(
     context: AssetExecutionContext,
     dbt: DbtCliResource,
 ) -> Iterator[
-    Output | AssetMaterialization | AssetObservation | AssetCheckResult | AssetCheckEvaluation
+    Output[Any] | AssetMaterialization | AssetObservation | AssetCheckResult | AssetCheckEvaluation
 ]:
     yield from dbt.cli(["build"], context=context).stream()

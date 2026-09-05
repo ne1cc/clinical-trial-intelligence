@@ -33,6 +33,7 @@ def _silver_trial_stats(cfg: ProjectConfig, run_id: str) -> tuple[int, int] | No
     row = duckdb.sql(
         f"select count(*), count(distinct nct_id) from read_parquet('{path.as_posix()}')"
     ).fetchone()
+    assert row is not None
     return int(row[0]), int(row[1])
 
 
@@ -93,7 +94,9 @@ def run_reconciliation(cfg: ProjectConfig | None = None) -> list[ReconciliationC
     if warehouse.exists():
         con = duckdb.connect(str(warehouse), read_only=True)
         try:
-            dim_trial_count = con.execute("select count(*) from main_marts.dim_trial").fetchone()[0]
+            row = con.execute("select count(*) from main_marts.dim_trial").fetchone()
+            assert row is not None
+            dim_trial_count = row[0]
             latest_stats = _silver_trial_stats(cfg, latest.ingestion_run_id)
             expected_trials = latest_stats[1] if latest_stats else None
             checks.append(
@@ -107,9 +110,11 @@ def run_reconciliation(cfg: ProjectConfig | None = None) -> list[ReconciliationC
                     " equality holds while snapshots share one query scope.",
                 )
             )
-            current_flags = con.execute(
+            flag_row = con.execute(
                 "select count(*) from main_marts.fct_trial_snapshot where current_record_flag"
-            ).fetchone()[0]
+            ).fetchone()
+            assert flag_row is not None
+            current_flags = flag_row[0]
             checks.append(
                 ReconciliationCheck(
                     check="warehouse_one_current_record_per_trial",

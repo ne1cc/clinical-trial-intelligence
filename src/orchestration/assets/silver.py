@@ -13,7 +13,7 @@ from src.transform.build_silver_entities import run_transform
         "run not yet transformed."
     ),
 )
-def silver_entities(context: AssetExecutionContext) -> MaterializeResult:
+def silver_entities(context: AssetExecutionContext) -> MaterializeResult[None]:
     processed = run_transform(run_id=None, force=False)
     context.log.info(f"Transformed {len(processed)} bronze run(s): {processed}")
     return MaterializeResult(
