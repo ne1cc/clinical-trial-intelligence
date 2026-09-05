@@ -27,9 +27,20 @@ def require_warehouse() -> None:
         st.stop()
 
 
+def _materialize(df: pd.DataFrame) -> pd.DataFrame:
+    # DuckDB returns PyArrow-backed string and nullable integer columns which
+    # can cause SIGSEGV in Streamlit's dataframe renderer. Convert to standard
+    # pandas object/float64 dtypes.
+    for col in df.select_dtypes(include=["string"]).columns:
+        df[col] = df[col].astype("object")
+    for col in df.select_dtypes(include=["Int32", "Int64"]).columns:
+        df[col] = df[col].astype("float64")
+    return df
+
+
 @st.cache_data(ttl=600)
 def query(sql: str) -> pd.DataFrame:
-    return _connection().execute(sql).df()
+    return _materialize(_connection().execute(sql).df())
 
 
 def priority_queue() -> pd.DataFrame:
@@ -38,7 +49,7 @@ def priority_queue() -> pd.DataFrame:
 
 @st.cache_data(ttl=600)
 def trial_similarity(nct_id: str) -> pd.DataFrame:
-    return (
+    return _materialize(
         _connection()
         .execute(
             "select * from main_marts.mart_trial_similarity"
