@@ -6,7 +6,11 @@ from dagster_dbt import DbtCliResource
 from src.orchestration.assets.bronze import ctg_raw_pages
 from src.orchestration.assets.dbt_assets import clinical_trials_dbt_assets
 from src.orchestration.assets.silver import silver_entities
-from src.orchestration.checks import cross_layer_reconciliation, manifest_integrity
+from src.orchestration.checks import (
+    bronze_silver_reconciliation,
+    manifest_integrity,
+    warehouse_reconciliation,
+)
 
 weekly_refresh = define_asset_job(
     name="weekly_refresh",
@@ -21,7 +25,11 @@ weekly_refresh_schedule = ScheduleDefinition(
 
 defs = Definitions(
     assets=[ctg_raw_pages, silver_entities, clinical_trials_dbt_assets],
-    asset_checks=[manifest_integrity, cross_layer_reconciliation],
+    asset_checks=[
+        manifest_integrity,
+        bronze_silver_reconciliation,
+        warehouse_reconciliation,
+    ],
     resources={
         "dbt": DbtCliResource(project_dir="dbt_clinical_trials"),
     },

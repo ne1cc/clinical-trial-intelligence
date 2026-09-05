@@ -5,7 +5,7 @@ from dagster import materialize
 from src.ingest.snapshot_manifest import IngestionManifest, write_manifest
 from src.orchestration.assets.bronze import IngestParams, ctg_raw_pages
 from src.orchestration.assets.silver import silver_entities
-from src.orchestration.checks import cross_layer_reconciliation, manifest_integrity
+from src.orchestration.checks import bronze_silver_reconciliation, manifest_integrity
 from src.utils.dates import utc_now
 from tests.conftest import check_evaluation, materialize_with_checks
 
@@ -179,7 +179,7 @@ def test_silver_asset_materializes_processed_runs(project_root_tmp, monkeypatch)
     assert len(result.get_asset_materialization_events()) == 2
 
 
-def test_reconciliation_check_passes_on_consistent_state(project_root_tmp, monkeypatch) -> None:
+def test_bronze_silver_check_passes_on_consistent_state(project_root_tmp, monkeypatch) -> None:
     _seed_reconcilable_state()
     _patch_quiet_bronze(monkeypatch)
 
@@ -189,14 +189,14 @@ def test_reconciliation_check_passes_on_consistent_state(project_root_tmp, monke
     monkeypatch.setattr("src.orchestration.assets.silver.run_transform", fake_run_transform)
     result = materialize_with_checks(
         assets=[ctg_raw_pages, silver_entities],
-        asset_checks=[cross_layer_reconciliation],
+        asset_checks=[bronze_silver_reconciliation],
         run_config={"ops": {"ctg_raw_pages": {"config": IngestParams().model_dump()}}},
     )
-    evaluation = check_evaluation(result, "cross_layer_reconciliation")
+    evaluation = check_evaluation(result, "bronze_silver_reconciliation")
     assert evaluation is not None and evaluation.passed
 
 
-def test_reconciliation_check_fails_when_silver_missing(project_root_tmp, monkeypatch) -> None:
+def test_bronze_silver_check_fails_when_silver_missing(project_root_tmp, monkeypatch) -> None:
     _patch_quiet_bronze(monkeypatch)
 
     def fake_run_transform(run_id=None, force=False):
@@ -205,9 +205,48 @@ def test_reconciliation_check_fails_when_silver_missing(project_root_tmp, monkey
     monkeypatch.setattr("src.orchestration.assets.silver.run_transform", fake_run_transform)
     result = materialize_with_checks(
         assets=[ctg_raw_pages, silver_entities],
-        asset_checks=[cross_layer_reconciliation],
+        asset_checks=[bronze_silver_reconciliation],
         run_config={"ops": {"ctg_raw_pages": {"config": IngestParams().model_dump()}}},
         raise_on_error=False,
     )
-    evaluation = check_evaluation(result, "cross_layer_reconciliation")
+    evaluation = check_evaluation(result, "bronze_silver_reconciliation")
     assert evaluation is not None and not evaluation.passed
+
+
+def test_warehouse_checks_pass_on_consistent_state(project_root_tmp) -> None:
+    """warehouse_checks is the post-build gate on dim_trial: it validates the
+    dbt-built warehouse against the latest silver."""
+    _seed_reconcilable_state()
+
+    from src.quality.reconciliation import warehouse_checks
+
+    checks = warehouse_checks()
+    assert checks
+    assert all(c.passed for c in checks), [c.check for c in checks if not c.passed]
+
+
+def test_warehouse_checks_fail_when_warehouse_missing(project_root_tmp) -> None:
+    from src.config import load_config
+    from src.ingest.snapshot_manifest import write_manifest
+
+    cfg = load_config()
+    write_manifest(
+        cfg.paths.bronze_manifests,
+        IngestionManifest(
+            ingestion_run_id="20260904T120000Z_abc12345",
+            query_hash="hash123",
+            endpoint="https://clinicaltrials.gov/api/v2/studies",
+            params={"query.cond": "Alzheimer Disease"},
+            status="success",
+            started_at_utc=utc_now(),
+            ended_at_utc=utc_now(),
+            page_count=1,
+            record_count=1,
+            total_count_reported=1,
+        ),
+    )
+
+    from src.quality.reconciliation import warehouse_checks
+
+    checks = warehouse_checks()
+    assert [c.check for c in checks if not c.passed] == ["warehouse_exists"]
