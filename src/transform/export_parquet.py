@@ -12,6 +12,7 @@ from src.utils.paths import ensure_dir
 ENTITY_COLUMNS: dict[str, list[str]] = {
     "silver_trials": [
         "ingestion_run_id",
+        "indication_profile_id",
         "snapshot_timestamp_utc",
         "nct_id",
         "brief_title",
@@ -50,6 +51,7 @@ ENTITY_COLUMNS: dict[str, list[str]] = {
     ],
     "silver_trial_conditions": [
         "ingestion_run_id",
+        "indication_profile_id",
         "nct_id",
         "source_json_hash",
         "condition_raw",
@@ -60,6 +62,7 @@ ENTITY_COLUMNS: dict[str, list[str]] = {
     ],
     "silver_trial_interventions": [
         "ingestion_run_id",
+        "indication_profile_id",
         "nct_id",
         "source_json_hash",
         "intervention_name",
@@ -69,6 +72,7 @@ ENTITY_COLUMNS: dict[str, list[str]] = {
     ],
     "silver_trial_sponsors": [
         "ingestion_run_id",
+        "indication_profile_id",
         "nct_id",
         "source_json_hash",
         "sponsor_name",
@@ -78,6 +82,7 @@ ENTITY_COLUMNS: dict[str, list[str]] = {
     ],
     "silver_trial_locations": [
         "ingestion_run_id",
+        "indication_profile_id",
         "nct_id",
         "source_json_hash",
         "facility_name",
@@ -96,6 +101,7 @@ ENTITY_COLUMNS: dict[str, list[str]] = {
     ],
     "silver_trial_outcomes": [
         "ingestion_run_id",
+        "indication_profile_id",
         "nct_id",
         "source_json_hash",
         "outcome_type",

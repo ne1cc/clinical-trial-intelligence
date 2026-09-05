@@ -3,178 +3,609 @@ version: 2
 models:
   - name: dim_trial
     description: One row per NCT ID (current record from latest snapshot).
+    contract:
+      enforced: true
     columns:
       - name: trial_key
+        data_type: VARCHAR
         tests: [not_null, unique]
       - name: nct_id
+        data_type: VARCHAR
         tests: [not_null, unique]
       - name: registry_url
+        data_type: VARCHAR
         description: Public ClinicalTrials.gov record URL derived from the NCT ID.
         tests: [not_null]
       - name: current_overall_status
+        data_type: VARCHAR
         tests: [not_null]
+      - name: current_brief_title
+        data_type: VARCHAR
+      - name: current_phase
+        data_type: VARCHAR
+      - name: current_study_type
+        data_type: VARCHAR
+      - name: current_lead_sponsor
+        data_type: VARCHAR
+      - name: current_lead_sponsor_normalized
+        data_type: VARCHAR
+      - name: start_date
+        data_type: DATE
+      - name: primary_completion_date
+        data_type: DATE
+      - name: completion_date
+        data_type: DATE
+      - name: study_first_post_date
+        data_type: DATE
+      - name: enrollment_count
+        data_type: INTEGER
+      - name: enrollment_type
+        data_type: VARCHAR
+      - name: current_has_results_flag
+        data_type: BOOLEAN
+      - name: record_quality_flag
+        data_type: VARCHAR
+      - name: first_seen_snapshot_date
+        data_type: DATE
+      - name: latest_seen_snapshot_date
+        data_type: DATE
+      - name: active_in_latest_snapshot_flag
+        data_type: BOOLEAN
 
   - name: dim_condition
+    contract:
+      enforced: true
     columns:
       - name: condition_key
+        data_type: VARCHAR
         tests: [not_null, unique]
+      - name: condition_normalized
+        data_type: VARCHAR
+      - name: condition_display_name
+        data_type: VARCHAR
+      - name: condition_group
+        data_type: VARCHAR
+      - name: dementia_relevance_flag
+        data_type: BOOLEAN
+      - name: mapping_confidence
+        data_type: VARCHAR
+      - name: trial_count
+        data_type: BIGINT
 
   - name: dim_sponsor
+    contract:
+      enforced: true
     columns:
       - name: sponsor_key
+        data_type: VARCHAR
         tests: [not_null, unique]
+      - name: sponsor_normalized
+        data_type: VARCHAR
+      - name: sponsor_display_name
+        data_type: VARCHAR
+      - name: sponsor_class
+        data_type: VARCHAR
+      - name: trial_count
+        data_type: BIGINT
+      - name: lead_sponsor_trial_count
+        data_type: BIGINT
 
   - name: dim_geography
+    contract:
+      enforced: true
     columns:
       - name: geography_key
+        data_type: VARCHAR
         tests: [not_null, unique]
       - name: state_code
+        data_type: VARCHAR
         tests: [not_null, unique]
+      - name: geo_level
+        data_type: VARCHAR
+      - name: country
+        data_type: VARCHAR
+      - name: county_fips
+        data_type: VARCHAR
+      - name: metro_area
+        data_type: VARCHAR
+      - name: trial_count
+        data_type: BIGINT
+      - name: listed_site_count
+        data_type: BIGINT
 
   - name: dim_date
+    contract:
+      enforced: true
     columns:
       - name: date_day
+        data_type: DATE
         tests: [not_null, unique]
+      - name: year
+        data_type: BIGINT
+      - name: month
+        data_type: BIGINT
+      - name: quarter
+        data_type: BIGINT
+      - name: month_start_date
+        data_type: DATE
+      - name: quarter_start_date
+        data_type: DATE
+      - name: year_month
+        data_type: VARCHAR
+      - name: day_name
+        data_type: VARCHAR
+      - name: is_weekend
+        data_type: BOOLEAN
 
   - name: fct_trial_snapshot
     description: One row per NCT ID per complete snapshot date.
+    contract:
+      enforced: true
     columns:
       - name: snapshot_key
+        data_type: VARCHAR
         tests: [not_null, unique]
       - name: trial_key
+        data_type: VARCHAR
         tests:
           - not_null
           - relationships:
               to: ref('dim_trial')
               field: trial_key
       - name: nct_id
+        data_type: VARCHAR
         tests: [not_null]
       - name: snapshot_date
+        data_type: DATE
         tests: [not_null]
+      - name: ingestion_run_id
+        data_type: VARCHAR
+      - name: snapshot_timestamp_utc
+        data_type: TIMESTAMP
+      - name: overall_status
+        data_type: VARCHAR
+      - name: previous_status
+        data_type: VARCHAR
+      - name: status_changed_from_previous_snapshot_flag
+        data_type: BOOLEAN
+      - name: entered_recruiting_flag
+        data_type: BOOLEAN
+      - name: left_recruiting_flag
+        data_type: BOOLEAN
+      - name: phase_normalized
+        data_type: VARCHAR
+      - name: study_type
+        data_type: VARCHAR
+      - name: enrollment_count
+        data_type: INTEGER
+      - name: lead_sponsor_name
+        data_type: VARCHAR
+      - name: lead_sponsor_normalized
+        data_type: VARCHAR
+      - name: has_results_flag
+        data_type: BOOLEAN
+      - name: study_first_post_date
+        data_type: DATE
+      - name: record_quality_flag
+        data_type: VARCHAR
+      - name: first_seen_snapshot_date
+        data_type: DATE
+      - name: days_since_first_seen
+        data_type: BIGINT
+      - name: condition_group_count
+        data_type: BIGINT
+      - name: site_count_us
+        data_type: BIGINT
+      - name: record_hash
+        data_type: VARCHAR
+      - name: current_record_flag
+        data_type: BOOLEAN
 
   - name: fct_trial_site
     description: One row per trial x U.S. facility x snapshot date.
+    contract:
+      enforced: true
     columns:
       - name: trial_site_key
+        data_type: VARCHAR
         tests: [not_null, unique]
       - name: trial_key
+        data_type: VARCHAR
         tests:
           - not_null
           - relationships:
               to: ref('dim_trial')
               field: trial_key
       - name: state_normalized
+        data_type: VARCHAR
         tests: [not_null]
+      - name: site_key
+        data_type: VARCHAR
+      - name: nct_id
+        data_type: VARCHAR
+      - name: ingestion_run_id
+        data_type: VARCHAR
+      - name: snapshot_date
+        data_type: DATE
+      - name: facility_name
+        data_type: VARCHAR
+      - name: facility_normalized
+        data_type: VARCHAR
+      - name: city
+        data_type: VARCHAR
+      - name: city_normalized
+        data_type: VARCHAR
+      - name: zip_code
+        data_type: VARCHAR
+      - name: location_status
+        data_type: VARCHAR
+      - name: trial_overall_status
+        data_type: VARCHAR
+      - name: phase_normalized
+        data_type: VARCHAR
+      - name: lead_sponsor_normalized
+        data_type: VARCHAR
 
   - name: bridge_trial_condition
+    contract:
+      enforced: true
     columns:
       - name: trial_condition_key
+        data_type: VARCHAR
         tests: [not_null, unique]
       - name: trial_key
+        data_type: VARCHAR
         tests:
           - not_null
           - relationships:
               to: ref('dim_trial')
               field: trial_key
       - name: condition_group
+        data_type: VARCHAR
         tests: [not_null]
+      - name: nct_id
+        data_type: VARCHAR
+      - name: dementia_relevance_flag
+        data_type: BOOLEAN
+      - name: mapping_confidence
+        data_type: VARCHAR
+      - name: source_condition_count
+        data_type: BIGINT
 
   - name: bridge_trial_sponsor
+    contract:
+      enforced: true
     columns:
       - name: trial_sponsor_key
+        data_type: VARCHAR
         tests: [not_null, unique]
       - name: trial_key
+        data_type: VARCHAR
         tests:
           - not_null
           - relationships:
               to: ref('dim_trial')
               field: trial_key
+      - name: sponsor_key
+        data_type: VARCHAR
+      - name: nct_id
+        data_type: VARCHAR
+      - name: sponsor_name
+        data_type: VARCHAR
+      - name: sponsor_normalized
+        data_type: VARCHAR
+      - name: sponsor_role
+        data_type: VARCHAR
+      - name: sponsor_class
+        data_type: VARCHAR
+      - name: lead_sponsor_flag
+        data_type: BOOLEAN
 
   - name: mart_trial_activity
     description: >
       Segment activity per snapshot. Counts are registry listings,
       not patient availability.
+    contract:
+      enforced: true
     columns:
       - name: trial_count
+        data_type: BIGINT
         tests: [not_null]
+      - name: snapshot_date
+        data_type: DATE
+      - name: condition_group
+        data_type: VARCHAR
+      - name: state_normalized
+        data_type: VARCHAR
+      - name: phase_normalized
+        data_type: VARCHAR
+      - name: overall_status
+        data_type: VARCHAR
+      - name: sponsor_count
+        data_type: BIGINT
+      - name: listed_site_count
+        data_type: HUGEINT
+      - name: entered_recruiting_count
+        data_type: BIGINT
+      - name: left_recruiting_count
+        data_type: BIGINT
+      - name: dementia_relevant_trial_count
+        data_type: BIGINT
+      - name: flagged_record_count
+        data_type: BIGINT
 
   - name: mart_recruiting_competition
     description: >
       Potential competition signal per recruiting segment. Not a
       recruitment forecast.
+    contract:
+      enforced: true
     columns:
       - name: recruiting_trial_count
+        data_type: BIGINT
         tests: [not_null]
       - name: competition_signal_band
+        data_type: VARCHAR
         tests:
           - not_null
           - accepted_values:
               values: ['low', 'moderate', 'elevated']
+      - name: snapshot_date
+        data_type: DATE
+      - name: condition_group
+        data_type: VARCHAR
+      - name: state_normalized
+        data_type: VARCHAR
+      - name: phase_normalized
+        data_type: VARCHAR
+      - name: listed_site_count
+        data_type: HUGEINT
+      - name: entered_recruiting_count
+        data_type: BIGINT
+      - name: newly_posted_90d_proxy
+        data_type: BIGINT
+      - name: new_recruiting_30d
+        data_type: HUGEINT
+      - name: new_recruiting_90d
+        data_type: HUGEINT
+      - name: recruiting_count_90d_baseline
+        data_type: BIGINT
+      - name: recruiting_growth_90d
+        data_type: DOUBLE
+      - name: sponsor_count
+        data_type: BIGINT
+      - name: top_sponsor_share
+        data_type: DOUBLE
+      - name: sponsor_hhi
+        data_type: DOUBLE
+      - name: density_percentile
+        data_type: DOUBLE
 
   - name: mart_site_overlap
+    contract:
+      enforced: true
     columns:
       - name: facility_normalized
+        data_type: VARCHAR
         tests: [not_null]
       - name: listed_trial_count
+        data_type: BIGINT
         tests: [not_null]
+      - name: snapshot_date
+        data_type: DATE
+      - name: city_normalized
+        data_type: VARCHAR
+      - name: state_normalized
+        data_type: VARCHAR
+      - name: facility_name
+        data_type: VARCHAR
+      - name: city
+        data_type: VARCHAR
+      - name: recruiting_trial_count
+        data_type: BIGINT
+      - name: sponsor_count
+        data_type: BIGINT
+      - name: phase_mix
+        data_type: VARCHAR
+      - name: repeated_site_participation_flag
+        data_type: BOOLEAN
 
   - name: mart_condition_geography_trends
+    contract:
+      enforced: true
     columns:
       - name: activity_month
+        data_type: TIMESTAMP
         tests: [not_null]
       - name: condition_group
+        data_type: VARCHAR
         tests: [not_null]
+      - name: state_normalized
+        data_type: VARCHAR
+      - name: trial_count
+        data_type: BIGINT
+      - name: recruiting_trial_count
+        data_type: BIGINT
+      - name: newly_posted_in_month_proxy
+        data_type: BIGINT
+      - name: sponsor_count
+        data_type: BIGINT
+      - name: recruiting_trial_count_3m_avg
+        data_type: DOUBLE
+      - name: recruiting_count_3m_baseline
+        data_type: BIGINT
+      - name: recruiting_growth_3m
+        data_type: DOUBLE
 
   - name: mart_data_reliability
     description: One row per ingestion run with reconciliation shares.
+    contract:
+      enforced: true
     columns:
       - name: ingestion_run_id
+        data_type: VARCHAR
         tests: [not_null, unique]
+      - name: snapshot_date
+        data_type: DATE
+      - name: started_at_utc
+        data_type: TIMESTAMP
+      - name: condition
+        data_type: VARCHAR
+      - name: mode
+        data_type: VARCHAR
+      - name: status
+        data_type: VARCHAR
+      - name: page_count
+        data_type: INTEGER
+      - name: manifest_record_count
+        data_type: INTEGER
+      - name: total_count_reported
+        data_type: INTEGER
+      - name: quarantined_record_count
+        data_type: INTEGER
+      - name: trial_row_count
+        data_type: BIGINT
+      - name: distinct_trial_count
+        data_type: BIGINT
+      - name: manifest_reconciled_flag
+        data_type: BOOLEAN
+      - name: unique_nct_flag
+        data_type: BOOLEAN
+      - name: flagged_record_count
+        data_type: BIGINT
+      - name: flagged_record_share
+        data_type: DOUBLE
+      - name: missing_enrollment_share
+        data_type: DOUBLE
+      - name: missing_start_date_share
+        data_type: DOUBLE
+      - name: missing_lead_sponsor_share
+        data_type: DOUBLE
+      - name: location_row_count
+        data_type: BIGINT
+      - name: usable_location_count
+        data_type: BIGINT
+      - name: usable_location_share
+        data_type: DOUBLE
+      - name: condition_row_count
+        data_type: BIGINT
+      - name: low_confidence_condition_count
+        data_type: BIGINT
+      - name: low_confidence_condition_share
+        data_type: DOUBLE
+      - name: error
+        data_type: INTEGER
 
   - name: mart_feasibility_priority_queue
     description: >
       Ranked segments for human feasibility review. Triage signal from
       public registry listings; not a recruitment forecast.
+    contract:
+      enforced: true
     columns:
       - name: priority_queue_key
+        data_type: VARCHAR
         tests: [not_null, unique]
       - name: feasibility_review_priority_score
+        data_type: DOUBLE
         tests: [not_null]
       - name: priority_band
+        data_type: VARCHAR
         tests:
           - not_null
           - accepted_values:
               values: ['watch', 'review', 'priority_review']
       - name: priority_explanation
+        data_type: VARCHAR
         tests: [not_null]
+      - name: snapshot_date
+        data_type: DATE
+      - name: condition_group
+        data_type: VARCHAR
+      - name: state_normalized
+        data_type: VARCHAR
+      - name: phase_normalized
+        data_type: VARCHAR
+      - name: priority_rank
+        data_type: BIGINT
+      - name: recruiting_trial_count
+        data_type: BIGINT
+      - name: listed_site_count
+        data_type: HUGEINT
+      - name: new_recruiting_90d
+        data_type: HUGEINT
+      - name: newly_posted_90d_proxy
+        data_type: BIGINT
+      - name: has_multi_snapshot_history
+        data_type: BOOLEAN
+      - name: recent_growth_input
+        data_type: HUGEINT
+      - name: growth_uses_registry_proxy_flag
+        data_type: BOOLEAN
+      - name: sponsor_count
+        data_type: BIGINT
+      - name: top_sponsor_share
+        data_type: DOUBLE
+      - name: sponsor_hhi
+        data_type: DOUBLE
+      - name: competition_signal_band
+        data_type: VARCHAR
+      - name: site_overlap_share
+        data_type: DOUBLE
+      - name: record_quality_ok_share
+        data_type: DOUBLE
+      - name: data_confidence_share
+        data_type: DOUBLE
+      - name: normalized_recruiting_trial_count
+        data_type: DOUBLE
+      - name: normalized_recent_recruiting_growth
+        data_type: DOUBLE
+      - name: normalized_sponsor_concentration
+        data_type: DOUBLE
+      - name: normalized_site_overlap
+        data_type: DOUBLE
+      - name: normalized_data_confidence_adjustment
+        data_type: DOUBLE
+      - name: interpretation_note
+        data_type: VARCHAR
       - name: weight_recruiting_trial_count
+        data_type: DOUBLE
         description: Configured weight for the recruiting-density component (config/score_weights.yml).
         tests: [not_null]
       - name: weight_recent_recruiting_growth
+        data_type: DOUBLE
         description: Configured weight for the recent-growth component.
         tests: [not_null]
       - name: weight_sponsor_concentration
+        data_type: DOUBLE
         description: Configured weight for the sponsor-concentration component.
         tests: [not_null]
       - name: weight_site_overlap
+        data_type: DOUBLE
         description: Configured weight for the site-overlap component.
         tests: [not_null]
       - name: weight_data_confidence_adjustment
+        data_type: DOUBLE
         description: Configured weight for the data-confidence component.
         tests: [not_null]
       - name: weighted_recruiting_trial_count
+        data_type: DOUBLE
         description: weight_recruiting_trial_count * normalized_recruiting_trial_count.
         tests: [not_null]
       - name: weighted_recent_recruiting_growth
+        data_type: DOUBLE
         description: weight_recent_recruiting_growth * normalized_recent_recruiting_growth.
         tests: [not_null]
       - name: weighted_sponsor_concentration
+        data_type: DOUBLE
         description: weight_sponsor_concentration * normalized_sponsor_concentration.
         tests: [not_null]
       - name: weighted_site_overlap
+        data_type: DOUBLE
         description: weight_site_overlap * normalized_site_overlap.
         tests: [not_null]
       - name: weighted_data_confidence_adjustment
+        data_type: DOUBLE
         description: weight_data_confidence_adjustment * normalized_data_confidence_adjustment.
         tests: [not_null]
 
@@ -184,57 +615,86 @@ models:
       signal, not clinical equivalence and not itself a competition
       signal. One row per (nct_id_a, nct_id_b) pair, nct_id_a's top 25
       matches only.
+    contract:
+      enforced: true
     columns:
       - name: trial_similarity_key
+        data_type: VARCHAR
         tests: [not_null, unique]
       - name: nct_id_a
+        data_type: VARCHAR
         tests: [not_null]
       - name: nct_id_b
+        data_type: VARCHAR
         tests: [not_null]
       - name: similarity_score
+        data_type: DOUBLE
         tests: [not_null]
       - name: similarity_rank
+        data_type: BIGINT
         tests: [not_null]
       - name: same_condition
+        data_type: INTEGER
         tests: [not_null]
       - name: weight_same_condition
+        data_type: DOUBLE
         tests: [not_null]
       - name: weighted_same_condition
+        data_type: DOUBLE
         tests: [not_null]
       - name: same_phase
+        data_type: INTEGER
         tests: [not_null]
       - name: weight_same_phase
+        data_type: DOUBLE
         tests: [not_null]
       - name: weighted_same_phase
+        data_type: DOUBLE
         tests: [not_null]
       - name: geography_overlap
+        data_type: INTEGER
         tests: [not_null]
       - name: weight_geography_overlap
+        data_type: DOUBLE
         tests: [not_null]
       - name: weighted_geography_overlap
+        data_type: DOUBLE
         tests: [not_null]
       - name: intervention_type_overlap
+        data_type: INTEGER
         tests: [not_null]
       - name: weight_intervention_type_overlap
+        data_type: DOUBLE
         tests: [not_null]
       - name: weighted_intervention_type_overlap
+        data_type: DOUBLE
         tests: [not_null]
       - name: study_design_match
+        data_type: INTEGER
         tests: [not_null]
       - name: weight_study_design_match
+        data_type: DOUBLE
         tests: [not_null]
       - name: weighted_study_design_match
+        data_type: DOUBLE
         tests: [not_null]
       - name: eligibility_compatible
+        data_type: INTEGER
         tests: [not_null]
       - name: weight_eligibility_compatible
+        data_type: DOUBLE
         tests: [not_null]
       - name: weighted_eligibility_compatible
+        data_type: DOUBLE
         tests: [not_null]
       - name: enrollment_band_match
+        data_type: INTEGER
         tests: [not_null]
       - name: weight_enrollment_band_match
+        data_type: DOUBLE
         tests: [not_null]
       - name: weighted_enrollment_band_match
+        data_type: DOUBLE
         tests: [not_null]
       - name: similarity_explanation
+        data_type: VARCHAR

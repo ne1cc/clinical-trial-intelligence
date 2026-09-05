@@ -1,0 +1,85 @@
+# ============================================================
+# Indication profile: Alzheimer's Disease and Related Dementias (ADRD)
+#
+# Migrated from config/project_config.yml as part of the pluggable-profile
+# refactor. This file is the drop-in replacement for the original default
+# config. All downstream pipeline behaviour is unchanged.
+#
+# Silver / gold / duckdb paths are NOT defined here — they are shared across
+# all non-ingest-only profiles and loaded from config/shared_paths.yml.
+#
+# API query parameters verified against ClinicalTrials.gov API v2
+# (GET /api/v2/studies) on 2026-07-24. OpenAPI spec:
+#   https://clinicaltrials.gov/api/oas/v2
+# ============================================================
+
+profile:
+  id: adrd
+  display_name: "Alzheimer's Disease and Related Dementias"
+  ingest_only: false
+  taxonomy: config/condition_taxonomy.yml    # path relative to project root
+  score_weights: config/score_weights.yml   # path relative to project root
+
+api:
+  base_url: https://clinicaltrials.gov/api/v2
+  studies_endpoint: /studies
+  openapi_spec_url: https://clinicaltrials.gov/api/oas/v2
+  docs_url: https://clinicaltrials.gov/data-api/api
+  format: json
+  page_size: 100            # API max is 1000; 100 keeps bronze pages reviewable
+  count_total: true
+  query_params:
+    query.cond: "Alzheimer Disease"
+    filter.advanced: "AREA[StudyType]INTERVENTIONAL"
+    filter.overallStatus:
+      - RECRUITING
+      - ACTIVE_NOT_RECRUITING
+      - NOT_YET_RECRUITING
+      - COMPLETED
+  http:
+    timeout_seconds: 30
+    max_retries: 5
+    backoff_initial_seconds: 1
+    backoff_max_seconds: 60
+    retry_on_status: [429, 500, 502, 503, 504]
+
+scope:
+  therapeutic_area: "Alzheimer's disease and related dementias"
+  geography: "United States"          # analysis scope; all raw records preserved
+  study_type: INTERVENTIONAL
+  statuses:
+    - RECRUITING
+    - ACTIVE_NOT_RECRUITING
+    - NOT_YET_RECRUITING
+    - COMPLETED
+  phases:
+    - EARLY_PHASE1
+    - PHASE1
+    - PHASE2
+    - PHASE3
+    - PHASE4
+  refresh_cadence: weekly
+  history_note: >-
+    ClinicalTrials.gov returns only the current record per study. Longitudinal
+    status history is constructed by this project from repeated weekly snapshots.
+
+paths:
+  bronze_api_responses: data/bronze/adrd/api_responses
+  bronze_manifests: data/bronze/adrd/manifests
+  # silver / gold / duckdb resolved from config/shared_paths.yml at runtime
+  silver: data/silver
+  gold: data/gold
+  duckdb: data/warehouse/clinical_trials.duckdb
+  quarantine: data/bronze/adrd/manifests/quarantine
+
+ingestion:
+  mode_default: incremental
+  reuse_window_hours: 24
+  page_file_pattern: "run_id={run_id}/page={page:05d}.json"
+  manifest_file_pattern: "manifest_{run_id}.json"
+
+guardrails:
+  disclaimer: >-
+    Public-registry-based planning signals for analytical portfolio
+    demonstration only. Not a recruitment forecast, not clinical decision
+    support, and not an assessment of site, sponsor, or population quality.

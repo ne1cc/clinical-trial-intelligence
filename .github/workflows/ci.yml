@@ -30,7 +30,12 @@ jobs:
         run: uv sync --all-groups --frozen
 
       - name: Lint
-        run: uv run ruff check src tests
+        run: |
+          uv run ruff check src tests dashboard
+          uv run ruff format --check src tests dashboard
 
-      - name: Unit tests
-        run: uv run pytest
+      - name: Type check
+        run: uv run mypy
+
+      - name: Unit tests with coverage gate
+        run: uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=71

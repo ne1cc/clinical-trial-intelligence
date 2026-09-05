@@ -10,6 +10,7 @@ CONDITION   ?= Alzheimer Disease
 .DEFAULT_GOAL := help
 
 .PHONY: help setup env ingest full-refresh ingest-full-catalog full-catalog-full-refresh \
+        orchestrate orchestrate-full-refresh \
         transform transform-full-catalog dbt-deps dbt-seed dbt-run dbt-test \
         dbt-docs quality-report dashboard test lint format clean pipeline
 
@@ -20,8 +21,9 @@ setup: ## Install dependencies and prepare local environment
 	uv sync --all-groups
 	@test -f .env || cp .env.example .env
 	@test -f $(DBT_DIR)/profiles.yml || { test -f $(DBT_DIR)/profiles.yml.example && cp $(DBT_DIR)/profiles.yml.example $(DBT_DIR)/profiles.yml || true; }
-	@mkdir -p data/bronze/api_responses data/bronze/manifests data/silver data/gold data/warehouse
-	@mkdir -p data/bronze_full_catalog/api_responses data/bronze_full_catalog/manifests
+	@mkdir -p data/bronze/adrd/api_responses data/bronze/adrd/manifests \
+	           data/bronze/full_catalog/api_responses data/bronze/full_catalog/manifests \
+	           data/silver data/gold data/warehouse
 	@echo "Setup complete. Edit .env if needed, then run: make ingest"
 
 ingest: ## Run an incremental ingestion snapshot from ClinicalTrials.gov (Phase 2)
@@ -31,10 +33,16 @@ full-refresh: ## Re-ingest all pages ignoring incremental state (Phase 2)
 	$(PYTHON) -m src.cli ingest --condition "$(CONDITION)" --full-refresh
 
 ingest-full-catalog: ## Opt-in: snapshot the full ClinicalTrials.gov registry, all conditions worldwide (bronze only)
-	$(PYTHON) -m src.cli ingest --profile full-catalog
+	$(PYTHON) -m src.cli ingest --profile full_catalog
 
 full-catalog-full-refresh: ## Opt-in: force a full re-pull of the full-catalog profile
-	$(PYTHON) -m src.cli ingest --profile full-catalog --full-refresh
+	$(PYTHON) -m src.cli ingest --profile full_catalog --full-refresh
+
+orchestrate: ## Run ingest + transform for all indication profiles in config/profiles/
+	$(PYTHON) -m src.cli orchestrate
+
+orchestrate-full-refresh: ## Force full re-ingest + transform for all indication profiles
+	$(PYTHON) -m src.cli orchestrate --full-refresh
 
 transform: ## Flatten bronze JSON into silver Parquet entities (Phase 3)
 	$(PYTHON) -m src.cli transform
@@ -68,8 +76,10 @@ pipeline: ingest transform dbt-run dbt-test quality-report ## Full end-to-end re
 test: ## Run Python unit tests
 	uv run pytest
 
-lint: ## Lint Python code
+lint: ## Lint and type-check Python code
 	uv run ruff check src tests dashboard
+	uv run ruff format --check src tests dashboard
+	uv run mypy
 
 format: ## Auto-format Python code
 	uv run ruff format src tests dashboard

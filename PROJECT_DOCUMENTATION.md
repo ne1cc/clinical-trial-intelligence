@@ -194,15 +194,19 @@ cti-dashboard/
 ├── .env.example                  # local overrides (no secrets needed)
 │
 ├── config/
-│   ├── project_config.yml        # API endpoint, query params, paths, HTTP policy
+│   ├── profiles/                 # pluggable indication profiles (adrd.yml, full_catalog.yml, ...)
+│   │   ├── adrd.yml              # ADRD indication profile (scope, query, bronze paths)
+│   │   └── full_catalog.yml      # opt-in full-registry snapshot profile (ingest-only)
+│   ├── shared_paths.yml          # shared silver, gold, and DuckDB paths across profiles
 │   ├── condition_taxonomy.yml    # ADRD condition-group mapping rules
 │   ├── geography_rules.yml       # US state normalization rules
 │   ├── score_weights.yml         # feasibility score weights + bands
 │   └── roi_assumptions.yml       # editable scenario-calculator assumptions
 │
 ├── src/
-│   ├── cli.py                    # python -m src.cli {ingest,transform,quality-report}
+│   ├── cli.py                    # python -m src.cli {ingest,transform,quality-report,orchestrate}
 │   ├── config.py                 # typed pydantic config with .env overrides
+│   ├── profiles.py               # IndicationProfile dataclass + ProfileRegistry discovery
 │   ├── ingest/                   # ctg_client, pagination, retry_policy,
 │   │                             # snapshot_manifest, validate_api_payload,
 │   │                             # extract_studies (orchestrator)
@@ -675,8 +679,11 @@ make dashboard        # http://localhost:8501
 
 | Command | What it does |
 |---|---|
-| `make ingest` | incremental bronze snapshot (skips if a recent complete run exists) |
+| `make ingest` | incremental bronze snapshot for ADRD (skips if a recent complete run exists) |
 | `make full-refresh` | force a complete re-pull as a new run |
+| `make ingest-full-catalog` | opt-in snapshot of full registry across all conditions worldwide |
+| `make orchestrate` | fan out ingest + transform across all discovered profiles in `config/profiles/` |
+| `make orchestrate-full-refresh` | force full ingest + transform across all discovered profiles |
 | `make transform` | bronze → silver Parquet (+ profiling, quarantine, drift scan) |
 | `make dbt-deps` / `dbt-run` / `dbt-test` / `dbt-docs` | warehouse build, tests, docs |
 | `make quality-report` | write `reports/data_quality_report.md` |
@@ -702,7 +709,10 @@ status-transition counts (and `growth_uses_registry_proxy_flag` flips off).
 
 | File | Controls |
 |---|---|
-| `config/project_config.yml` | API base URL, endpoint, `query.cond`, status/type filters, page size, HTTP timeout/retry policy, all data paths, incremental reuse window |
+| `config/profiles/*.yml` | Indication profiles: API query, status/type filters, page size, bronze paths, taxonomy & score-weight references |
+| `config/profiles/adrd.yml` | ADRD indication profile (migrated from `project_config.yml`) |
+| `config/profiles/full_catalog.yml` | Opt-in full registry profile (`ingest_only: true`) |
+| `config/shared_paths.yml` | Shared silver, gold, and DuckDB paths across non-ingest-only profiles |
 | `config/condition_taxonomy.yml` | mapping of registry condition strings → ADRD condition groups, with confidence rules |
 | `config/geography_rules.yml` | state-name → USPS code normalization |
 | `config/score_weights.yml` | score weights, normalization method, band thresholds (mirrored in seed + dbt vars; sync enforced by pytest) |
@@ -729,9 +739,10 @@ status-transition counts (and `growth_uses_registry_proxy_flag` flips off).
 
 ```mermaid
 flowchart LR
-    M1["MVP (done)<br/>CT.gov pipeline,<br/>marts, dashboard"] --> M2["ACS population layer<br/>per-capita density"]
+    M1["MVP (done)<br/>CT.gov pipeline,<br/>marts, dashboard"] --> MP["Pluggable indication profiles (done)<br/>Multi-indication config registry,<br/>shared silver/gold, profile dedup"]
+    MP --> M2["ACS population layer<br/>per-capita density"]
     M2 --> M3["CDC/ATSDR SVI<br/>county access-barrier context"]
-    M3 --> M4["Oncology module<br/>NCI CTS API"]
+    M3 --> M4["Cross-indication comparison marts<br/>& multi-indication dashboard filters"]
     M4 --> M5["Cloud warehouse portability<br/>+ orchestration (Dagster/Airflow)"]
 ```
 

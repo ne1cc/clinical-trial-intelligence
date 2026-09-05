@@ -3,6 +3,7 @@ reconciliation of trial rows against the ingestion manifest."""
 
 import json
 from pathlib import Path
+from typing import Any
 
 import duckdb
 
@@ -57,10 +58,10 @@ def profile_entity(path: Path) -> dict:
     return profile
 
 
-def profile_run(run_id: str, config: ProjectConfig | None = None) -> dict:
+def profile_run(run_id: str, config: ProjectConfig | None = None) -> dict[str, Any]:
     log = setup_logging()
     cfg = config or get_config()
-    report: dict = {
+    report: dict[str, Any] = {
         "ingestion_run_id": run_id,
         "profiled_at_utc": utc_now_iso(),
         "entities": {},

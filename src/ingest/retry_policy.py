@@ -1,6 +1,8 @@
 """Retry policy for ClinicalTrials.gov API calls: exponential backoff on
 retryable HTTP statuses, timeouts, and transport errors."""
 
+from typing import Any
+
 import requests
 from loguru import logger
 from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -23,7 +25,7 @@ RETRYABLE_EXCEPTIONS = (
 
 
 def build_retryer(http_config: HttpConfig) -> Retrying:
-    def _before_sleep(retry_state) -> None:
+    def _before_sleep(retry_state: Any) -> None:
         logger.warning(
             "Retryable error on attempt {}/{}: {}",
             retry_state.attempt_number,

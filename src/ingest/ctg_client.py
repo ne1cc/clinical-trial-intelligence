@@ -48,9 +48,7 @@ class CTGClient:
             query["pageToken"] = page_token
 
         def _request() -> requests.Response:
-            response = self._client.get(
-                self._url, params=query, timeout=self._http.timeout_seconds
-            )
+            response = self._client.get(self._url, params=query, timeout=self._http.timeout_seconds)
             if response.status_code in self._http.retry_on_status:
                 raise RetryableHTTPStatusError(response.status_code, self._url)
             response.raise_for_status()
@@ -65,5 +63,5 @@ class CTGClient:
     def __enter__(self) -> "CTGClient":
         return self
 
-    def __exit__(self, *exc_info) -> None:
+    def __exit__(self, *exc_info: object) -> None:
         self.close()
