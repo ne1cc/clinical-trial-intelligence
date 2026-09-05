@@ -52,7 +52,19 @@ def _success_runs(cfg: ProjectConfig) -> list[IngestionManifest]:
 
 def bronze_silver_checks(cfg: ProjectConfig | None = None) -> list[ReconciliationCheck]:
     """Bronze manifests vs silver Parquet. No warehouse dependency — safe to run
-    as the pre-dbt gate on silver_entities."""
+    as the pre-dbt gate on silver_entities.
+
+    The row expectation is the manifest count minus the exclusions the transform
+    recorded for this run: it keeps the first occurrence of a repeated NCT ID and
+    quarantines NCT-less records, so a shortfall against the raw manifest count is
+    normal, and gating on the raw count blocks every legitimate dedup.
+
+    This is not a weaker loss guard. The expectation can only account for drops the
+    transform itself reported, so any loss beyond those still fails, and stats that
+    are missing, unreadable, or carry a disagreeing manifest count fall back to the
+    full record count. Every branch stays exact — `rows <= record_count` would pass
+    a silently truncated table, which is the failure this gate exists to catch.
+    """
     cfg = cfg or get_config()
     checks: list[ReconciliationCheck] = []
 
@@ -91,9 +103,7 @@ def bronze_silver_checks(cfg: ProjectConfig | None = None) -> list[Reconciliatio
         )
         note = ""
         if expected is None:
-            # Without the transform's exclusion counts, the only defensible
-            # expectation is that every bronze record survived: a shortfall
-            # stays a failure rather than being waved through.
+            # No recorded exclusions, so expect every bronze record to survive.
             expected, note = (
                 manifest.record_count,
                 (
