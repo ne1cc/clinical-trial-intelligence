@@ -2,13 +2,15 @@
 
 [![CI](https://github.com/ne1cc/cti-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/ne1cc/cti-dashboard/actions/workflows/ci.yml)
 
+**Live demo:** [cti-dashboard.fly.dev](https://cti-dashboard.fly.dev/)
+
 Over 80% of clinical trials miss their initial enrollment deadlines, largely because sponsors pick trial sites already overcrowded with competing studies for the same patient pool.
 
 This project turns public registry data from **ClinicalTrials.gov (API v2)** into an automated feasibility and site-selection intelligence suite. It snapshots trial statuses over time, detects weekly state transitions, and calculates competition density scores across diseases, phases, and geographies—giving clinical operations teams clear signals on where to recruit before committing millions to site activation.
 
-> 📑 **Executive Business Case:** See [`docs/business_case.md`](docs/business_case.md) for trial operational ROI, cost-of-delay analysis, and the site-feasibility decision framework.
+> **Executive Business Case:** See [`docs/business_case.md`](docs/business_case.md) for trial operational ROI, cost-of-delay analysis, and the site-feasibility decision framework.
 >
-> ⚠️ **Interpretation Note:** All outputs are *public-registry-based planning signals* for operational feasibility review, not clinical decision support or predictive patient forecasts.
+> **Interpretation Note:** All outputs are *public-registry-based planning signals* for operational feasibility review, not clinical decision support or predictive patient forecasts.
 
 ---
 

@@ -1,5 +1,8 @@
 # Deploy the Streamlit dashboard (Fly.io)
 
+**Live:** this project's own deployment runs at
+[cti-dashboard.fly.dev](https://cti-dashboard.fly.dev/).
+
 The dashboard reads a local DuckDB warehouse built by the pipeline. Unlike
 Streamlit Community Cloud (see `docs/DEPLOY_STREAMLIT.md`), this Fly.io
 setup keeps the pipeline running: the container bootstraps the warehouse on
