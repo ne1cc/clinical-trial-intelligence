@@ -147,3 +147,33 @@ models:
               values: ['watch', 'review', 'priority_review']
       - name: priority_explanation
         tests: [not_null]
+      - name: weight_recruiting_trial_count
+        description: Configured weight for the recruiting-density component (config/score_weights.yml).
+        tests: [not_null]
+      - name: weight_recent_recruiting_growth
+        description: Configured weight for the recent-growth component.
+        tests: [not_null]
+      - name: weight_sponsor_concentration
+        description: Configured weight for the sponsor-concentration component.
+        tests: [not_null]
+      - name: weight_site_overlap
+        description: Configured weight for the site-overlap component.
+        tests: [not_null]
+      - name: weight_data_confidence_adjustment
+        description: Configured weight for the data-confidence component.
+        tests: [not_null]
+      - name: weighted_recruiting_trial_count
+        description: weight_recruiting_trial_count * normalized_recruiting_trial_count.
+        tests: [not_null]
+      - name: weighted_recent_recruiting_growth
+        description: weight_recent_recruiting_growth * normalized_recent_recruiting_growth.
+        tests: [not_null]
+      - name: weighted_sponsor_concentration
+        description: weight_sponsor_concentration * normalized_sponsor_concentration.
+        tests: [not_null]
+      - name: weighted_site_overlap
+        description: weight_site_overlap * normalized_site_overlap.
+        tests: [not_null]
+      - name: weighted_data_confidence_adjustment
+        description: weight_data_confidence_adjustment * normalized_data_confidence_adjustment.
+        tests: [not_null]
