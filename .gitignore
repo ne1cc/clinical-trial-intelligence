@@ -16,7 +16,7 @@ data/warehouse/*.duckdb.wal
 __pycache__/
 *.py[cod]
 *.egg-info/
-.venv/
+.venv
 venv/
 .pytest_cache/
 .coverage
@@ -41,3 +41,7 @@ data/bronze/_schema_drift_*.json
 
 # Linked worktrees
 .worktrees/
+
+# AI tooling
+.claude/
+.gemini/

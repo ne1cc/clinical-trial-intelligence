@@ -9,6 +9,7 @@ select
     official_title,
     study_type,
     overall_status,
+    why_stopped,
     last_known_status,
     status_verified_date as status_verified_date_raw,
     cast(expanded_access_info as boolean) as has_expanded_access,
@@ -38,6 +39,7 @@ select
     eligibility_criteria_text,
     cast(has_results_flag as boolean) as has_results_flag,
     source_json_hash,
-    record_quality_flag
+    record_quality_flag,
+    indication_profile
 from {{ source('silver', 'silver_trials') }}
 where nct_id is not null

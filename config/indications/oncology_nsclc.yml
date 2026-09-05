@@ -1,0 +1,77 @@
+# ============================================================
+# Indication Profile: Non-Small Cell Lung Cancer (NSCLC)
+# Modular oncology profile for the clinical-trial-intelligence platform.
+# ============================================================
+
+indication_id: "oncology_nsclc"
+display_name: "Non-Small Cell Lung Cancer (NSCLC)"
+description: "Interventional oncology trials targeting NSCLC histologies and targeted biomarkers."
+
+query:
+  condition: "Non-Small Cell Lung Cancer"
+  advanced_filter: "AREA[StudyType]INTERVENTIONAL"
+
+taxonomy:
+  default:
+    condition_group: other_thoracic_oncology
+    relevance_flag: false
+
+  groups:
+    - condition_group: nsclc_adenocarcinoma
+      relevance_flag: true
+      exact:
+        - lung adenocarcinoma
+        - adenocarcinoma of the lung
+        - non small cell lung adenocarcinoma
+      substrings:
+        - adenocarcinoma
+
+    - condition_group: nsclc_squamous
+      relevance_flag: true
+      exact:
+        - squamous cell lung carcinoma
+        - squamous non small cell lung cancer
+      substrings:
+        - squamous
+
+    - condition_group: nsclc_large_cell
+      relevance_flag: true
+      exact:
+        - large cell lung carcinoma
+      substrings:
+        - large cell
+
+    - condition_group: nsclc_biomarker_targeted
+      relevance_flag: true
+      exact: []
+      substrings:
+        - egfr
+        - alk
+        - kras
+        - ros1
+        - braf
+        - pd-l1
+        - pdl1
+        - met exon
+        - ret fusion
+
+    - condition_group: nsclc_metastatic_advanced
+      relevance_flag: true
+      exact:
+        - metastatic non-small cell lung cancer
+        - stage iv non-small cell lung cancer
+      substrings:
+        - metastatic
+        - stage iv
+        - advanced non small cell
+
+    - condition_group: nsclc_unspecified
+      relevance_flag: true
+      exact:
+        - non-small cell lung cancer
+        - non small cell lung cancer
+        - nsclc
+      substrings:
+        - non-small cell
+        - non small cell
+        - nsclc

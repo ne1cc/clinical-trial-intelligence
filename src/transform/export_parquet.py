@@ -15,6 +15,7 @@ ENTITY_COLUMNS: dict[str, list[str]] = {
         "official_title",
         "study_type",
         "overall_status",
+        "why_stopped",
         "last_known_status",
         "status_verified_date",
         "expanded_access_info",
@@ -38,6 +39,7 @@ ENTITY_COLUMNS: dict[str, list[str]] = {
         "has_results_flag",
         "source_json_hash",
         "record_quality_flag",
+        "indication_profile",
     ],
     "silver_trial_conditions": [
         "ingestion_run_id",

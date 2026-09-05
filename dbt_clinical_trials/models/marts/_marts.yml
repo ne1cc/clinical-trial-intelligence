@@ -13,6 +13,11 @@ models:
         tests: [not_null]
       - name: current_overall_status
         tests: [not_null]
+      - name: current_why_stopped
+        description: Free-text rationale if the trial was terminated, suspended, or withdrawn.
+      - name: current_indication_profile
+        description: Which config-driven indication profile (e.g. adrd, oncology_nsclc) this trial was ingested under.
+        tests: [not_null]
 
   - name: dim_condition
     columns:

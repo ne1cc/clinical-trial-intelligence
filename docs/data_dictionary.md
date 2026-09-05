@@ -41,6 +41,8 @@ quality framework).
 | ingestion_run_id / snapshot_date / snapshot_timestamp_utc | text/date/ts | provenance |
 | brief_title / official_title | text | registry titles |
 | overall_status | text | registry status at snapshot time |
+| why_stopped | text | free-text rationale if terminated/suspended/withdrawn |
+| indication_profile | text | which config-driven indication profile's query/taxonomy produced this run (`adrd`, `oncology_nsclc`, ...) |
 | study_type | text | INTERVENTIONAL in MVP scope |
 | phase_normalized | text | multi-phase joined "/", NA→NOT_APPLICABLE, null→UNKNOWN |
 | enrollment_count / enrollment_type | int/text | planned or actual per registry |
@@ -51,8 +53,10 @@ quality framework).
 | source_json_hash | text | SHA-256 of the study JSON |
 
 ### `silver_trial_conditions` — grain: NCT × condition × run
-`condition_raw`, `condition_normalized`, `condition_group` (config-driven
-taxonomy), `mapping_confidence` (high/medium/low), `dementia_relevance_flag`.
+`condition_raw`, `condition_normalized`, `condition_group` (keyed by whichever
+indication profile's taxonomy classified the run — see `config/indications/`),
+`mapping_confidence` (high/medium/low), `dementia_relevance_flag` (legacy name,
+same relevance semantics for every profile).
 
 ### `silver_trial_interventions` — grain: NCT × intervention × run
 `intervention_type`, `intervention_name`, `intervention_name_normalized`.

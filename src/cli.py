@@ -19,9 +19,16 @@ def build_parser() -> argparse.ArgumentParser:
         "ingest", help="Snapshot studies from ClinicalTrials.gov API v2 into bronze."
     )
     ingest.add_argument(
+        "--profile",
+        "--module",
+        dest="profile",
+        default=None,
+        help="Indication profile/module (e.g. 'adrd', 'oncology_nsclc'). Defaults to adrd.",
+    )
+    ingest.add_argument(
         "--condition",
         default=None,
-        help='Condition query (default: query.cond from config, e.g. "Alzheimer Disease").',
+        help='Condition query (default: query.cond from profile/config, e.g. "Alzheimer Disease").',
     )
     ingest.add_argument(
         "--full-refresh",
@@ -37,6 +44,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     transform = subparsers.add_parser(
         "transform", help="Flatten bronze JSON runs into normalized silver Parquet entities."
+    )
+    transform.add_argument(
+        "--profile",
+        "--module",
+        dest="profile",
+        default=None,
+        help="Indication profile/module for taxonomy mapping (e.g. 'adrd', 'oncology_nsclc').",
     )
     transform.add_argument(
         "--run-id",
@@ -71,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             manifest = run_ingestion(
                 condition=args.condition,
+                profile=args.profile,
                 full_refresh=args.full_refresh,
                 max_pages=args.max_pages,
             )
@@ -84,7 +99,11 @@ def main(argv: list[str] | None = None) -> int:
         from src.transform.build_silver_entities import run_transform
 
         try:
-            processed = run_transform(run_id=args.run_id, force=args.force)
+            processed = run_transform(
+                run_id=args.run_id,
+                force=args.force,
+                profile=args.profile,
+            )
             for run_id in processed:
                 profile_run(run_id)
         except Exception as exc:

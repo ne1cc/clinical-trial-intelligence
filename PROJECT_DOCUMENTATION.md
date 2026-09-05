@@ -195,7 +195,9 @@ cti-dashboard/
 │
 ├── config/
 │   ├── project_config.yml        # API endpoint, query params, paths, HTTP policy
-│   ├── condition_taxonomy.yml    # ADRD condition-group mapping rules
+│   ├── indications/              # Pluggable indication profiles
+│   │   ├── adrd.yml              # Alzheimer's disease & related dementias profile
+│   │   └── oncology_nsclc.yml    # Non-Small Cell Lung Cancer profile
 │   ├── geography_rules.yml       # US state normalization rules
 │   ├── score_weights.yml         # feasibility score weights + bands
 │   └── roi_assumptions.yml       # editable scenario-calculator assumptions
@@ -330,7 +332,7 @@ Properties worth noting:
 | `trials` | One row per study: status, phase, dates, enrollment, sponsor | partial-date parsing (`2026`, `2026-07`), phase mapping, text cleanup |
 | `trial_locations` | Listed facilities with city/state/zip/status | state → USPS 2-letter code, facility/city casefold+trim (best-effort) |
 | `trial_sponsors` | Lead sponsor + collaborators with class | role normalized to `lead_sponsor` / `collaborator` |
-| `trial_conditions` | Registry condition terms | mapped to ADRD condition groups via `config/condition_taxonomy.yml`, with confidence flag |
+| `trial_conditions` | Registry condition terms | mapped to indication-profile condition groups via `config/indications/*.yml`, with confidence flag |
 | `trial_interventions` | Intervention name + type | text normalization |
 | `trial_outcomes` | Primary/secondary outcome measures | text normalization |
 | `trial_statuses` | Status + record dates per snapshot | feeds status-history construction |
@@ -702,8 +704,8 @@ status-transition counts (and `growth_uses_registry_proxy_flag` flips off).
 
 | File | Controls |
 |---|---|
-| `config/project_config.yml` | API base URL, endpoint, `query.cond`, status/type filters, page size, HTTP timeout/retry policy, all data paths, incremental reuse window |
-| `config/condition_taxonomy.yml` | mapping of registry condition strings → ADRD condition groups, with confidence rules |
+| `config/project_config.yml` | API base URL, endpoint, shared status filters, page size, HTTP timeout/retry policy, all data paths, incremental reuse window, default indication profile |
+| `config/indications/*.yml` | Pluggable indication profiles defining disease queries and hierarchical condition taxonomies (e.g. `adrd.yml`, `oncology_nsclc.yml`) |
 | `config/geography_rules.yml` | state-name → USPS code normalization |
 | `config/score_weights.yml` | score weights, normalization method, band thresholds (mirrored in seed + dbt vars; sync enforced by pytest) |
 | `config/roi_assumptions.yml` | scenario-calculator assumptions and multipliers (with embedded disclaimer) |

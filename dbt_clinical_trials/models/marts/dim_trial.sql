@@ -5,6 +5,8 @@ select
     'https://clinicaltrials.gov/study/' || c.nct_id as registry_url,
     t.brief_title as current_brief_title,
     c.overall_status as current_overall_status,
+    t.why_stopped as current_why_stopped,
+    t.indication_profile as current_indication_profile,
     c.phase_normalized as current_phase,
     c.study_type as current_study_type,
     c.lead_sponsor_name as current_lead_sponsor,

@@ -82,6 +82,8 @@ def trial_explorer() -> pd.DataFrame:
             d.registry_url,
             d.current_brief_title as brief_title,
             d.current_overall_status as overall_status,
+            d.current_why_stopped as why_stopped,
+            d.current_indication_profile as indication_profile,
             d.current_phase as phase,
             d.current_lead_sponsor as lead_sponsor,
             d.study_first_post_date,

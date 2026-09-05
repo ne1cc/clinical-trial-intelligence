@@ -5,7 +5,9 @@ PYTHON      := uv run python
 DBT         := uv run dbt
 DBT_DIR     := dbt_clinical_trials
 DBT_FLAGS   := --project-dir $(DBT_DIR) --profiles-dir $(DBT_DIR)
-CONDITION   ?= Alzheimer Disease
+CONDITION   ?=
+MODULE      ?= adrd
+PROFILE     ?= $(MODULE)
 
 .DEFAULT_GOAL := help
 
@@ -23,13 +25,13 @@ setup: ## Install dependencies and prepare local environment
 	@echo "Setup complete. Edit .env if needed, then run: make ingest"
 
 ingest: ## Run an incremental ingestion snapshot from ClinicalTrials.gov (Phase 2)
-	$(PYTHON) -m src.cli ingest --condition "$(CONDITION)"
+	$(PYTHON) -m src.cli ingest --profile "$(PROFILE)" $(if $(CONDITION),--condition "$(CONDITION)")
 
 full-refresh: ## Re-ingest all pages ignoring incremental state (Phase 2)
-	$(PYTHON) -m src.cli ingest --condition "$(CONDITION)" --full-refresh
+	$(PYTHON) -m src.cli ingest --profile "$(PROFILE)" $(if $(CONDITION),--condition "$(CONDITION)") --full-refresh
 
 transform: ## Flatten bronze JSON into silver Parquet entities (Phase 3)
-	$(PYTHON) -m src.cli transform
+	$(PYTHON) -m src.cli transform --profile "$(PROFILE)"
 
 dbt-deps: ## Install dbt packages (Phase 4)
 	$(DBT) deps $(DBT_FLAGS)

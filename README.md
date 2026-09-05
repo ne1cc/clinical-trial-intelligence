@@ -70,10 +70,14 @@ erDiagram
 
 ## 7. Project scope
 
-- **Therapeutic area:** Alzheimer's disease and related dementias (config-driven taxonomy).
+- **Therapeutic areas:** Pluggable, config-driven indication profiles under `config/indications/`:
+  - **ADRD (Baseline default):** Alzheimer's disease and related dementias (`config/indications/adrd.yml`).
+  - **Oncology (NSCLC):** Non-Small Cell Lung Cancer histology and biomarker driver mutations (`config/indications/oncology_nsclc.yml`).
+  - Custom profiles easily added via YAML without code refactoring.
 - **Geography:** United States (all raw records preserved; U.S.-only in marts).
 - **Study type:** Interventional.
-- **Statuses:** RECRUITING, ACTIVE_NOT_RECRUITING, NOT_YET_RECRUITING, COMPLETED.
+- **Statuses:** Full lifecycle coverage: `RECRUITING`, `ACTIVE_NOT_RECRUITING`, `NOT_YET_RECRUITING`, `COMPLETED`, `TERMINATED`, `WITHDRAWN`, `SUSPENDED`, `ENROLLING_BY_INVITATION`.
+- **Headwind intelligence:** Extracts `whyStopped` cancellation rationales into `dim_trial` and the dashboard to identify recruitment failure hotspots.
 - **Phases:** EARLY_PHASE1 – PHASE4 where available.
 - **Cadence:** Weekly snapshots; history accrues from this project's own runs.
 

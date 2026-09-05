@@ -29,7 +29,7 @@ flowchart TB
     subgraph SILVER["Silver — normalized (src/transform)"]
         FLAT["flatten_studies.py<br/>nested JSON → tabular"]
         ENTITIES["Parquet entities:<br/>silver_trials · silver_trial_conditions<br/>silver_trial_interventions · silver_trial_sponsors<br/>silver_trial_locations · silver_trial_outcomes"]
-        TAX["condition_taxonomy.yml<br/>config-driven ADRD mapping"]
+        TAX["config/indications/*.yml<br/>pluggable per-profile query + taxonomy<br/>(adrd, oncology_nsclc)"]
         GEO["geography_rules.yml<br/>US state normalization"]
     end
 
@@ -79,10 +79,15 @@ flowchart TB
 ### Silver — clean normalized entities
 - Flattened, typed, standardized Parquet per entity, grain = source entity ×
   ingestion run (see `docs/data_dictionary.md`, Phase 4+).
-- Config-driven condition taxonomy and geography rules (version-controlled YAML;
-  no runtime LLM classification).
+- Config-driven condition taxonomy (per indication profile) and geography rules
+  (version-controlled YAML; no runtime LLM classification).
 - Data-quality flags (`record_quality_flag`, `usable_geography_flag`,
-  `dementia_relevance_flag`) computed here, not in dashboards.
+  `dementia_relevance_flag` — a legacy column name kept for backward compatibility;
+  it reflects relevance to whichever indication profile's taxonomy is active, not
+  only ADRD) computed here, not in dashboards.
+- Each run is stamped with `indication_profile` (which profile's query/taxonomy
+  produced it), carried through to `dim_trial.current_indication_profile` for
+  dashboard filtering.
 - All records preserved, including non-U.S. locations excluded from MVP marts.
 
 ### Gold — business-ready dimensional model

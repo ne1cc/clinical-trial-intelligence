@@ -71,6 +71,64 @@ class ProjectConfig(BaseModel):
     guardrails: dict[str, Any] = {}
 
 
+class IndicationQueryConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    condition: str
+    advanced_filter: str | None = None
+
+
+class IndicationProfile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    indication_id: str
+    display_name: str
+    description: str = ""
+    query: IndicationQueryConfig
+    taxonomy: dict[str, Any] = {}
+
+
+def load_indication_profile(
+    profile_name: str | None = None,
+    profiles_dir: str | Path = "config/indications",
+) -> IndicationProfile:
+    """Load an indication profile by name (e.g. 'adrd', 'oncology_nsclc').
+
+    If profile_name is None, falls back to CTI_INDICATION_PROFILE env var,
+    scope.default_indication_profile in project config, or 'adrd'.
+    """
+    if profile_name is None:
+        profile_name = os.getenv("CTI_INDICATION_PROFILE")
+        if not profile_name:
+            try:
+                cfg = get_config()
+                profile_name = cfg.scope.get("default_indication_profile", "adrd")
+            except Exception:
+                profile_name = "adrd"
+
+    # Allow direct path or profile id
+    path = Path(profile_name)
+    if not path.exists():
+        dir_path = project_root() / profiles_dir
+        path = dir_path / f"{profile_name}.yml"
+        if not path.exists():
+            path = dir_path / f"{profile_name}.yaml"
+    if not path.exists():
+        raise FileNotFoundError(f"Indication profile '{profile_name}' not found at {path}")
+
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return IndicationProfile(**raw)
+
+
+def list_indication_profiles(profiles_dir: str | Path = "config/indications") -> list[str]:
+    """List available indication profile identifiers."""
+    p_dir = project_root() / profiles_dir
+    if not p_dir.exists():
+        return []
+    stems = {f.stem for f in p_dir.glob("*.yml")} | {f.stem for f in p_dir.glob("*.yaml")}
+    return sorted(stems)
+
+
 def load_config(config_path: str | Path | None = None) -> ProjectConfig:
     load_dotenv(project_root() / ".env")
     path = Path(config_path or os.getenv("CTI_CONFIG_PATH", "config/project_config.yml"))
