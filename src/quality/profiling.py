@@ -22,15 +22,15 @@ def _quote(identifier: str) -> str:
     return '"' + identifier.replace('"', '""') + '"'
 
 
-def profile_entity(path: Path) -> dict:
+def profile_entity(path: Path) -> dict[str, Any]:
     # Single streaming aggregate over the parquet file: profiling must not
     # materialize full-catalog entity tables (hundreds of millions of rows
     # for locations/outcomes) in memory.
     source = path.as_posix()
     con = duckdb.connect(":memory:")
     try:
-        columns = [
-            row[0]
+        columns: list[str] = [
+            str(row[0])
             for row in con.execute("describe select * from read_parquet(?)", [source]).fetchall()
         ]
         aggregates = ["count(*)"] + [f"count({_quote(col)})" for col in columns]
@@ -42,8 +42,11 @@ def profile_entity(path: Path) -> dict:
     finally:
         con.close()
 
+    if stats is None:
+        return {"row_count": 0, "column_count": len(columns), "null_rates": {}}
+
     row_count = int(stats[0])
-    profile: dict = {
+    profile: dict[str, Any] = {
         "row_count": row_count,
         "column_count": len(columns),
         "null_rates": {},
