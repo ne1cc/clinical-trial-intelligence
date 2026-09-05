@@ -28,8 +28,7 @@ def test_status_filter_matches_scope_statuses(registry: ProfileRegistry) -> None
         api_statuses = profile.config.api.query_params.get("filter.overallStatus") or []
         scope_statuses = profile.config.scope.get("statuses") or []
         assert sorted(api_statuses) == sorted(scope_statuses), (
-            f"{profile.profile_id}: api {sorted(api_statuses)} != "
-            f"scope {sorted(scope_statuses)}"
+            f"{profile.profile_id}: api {sorted(api_statuses)} != scope {sorted(scope_statuses)}"
         )
 
 
@@ -68,9 +67,7 @@ def test_profile_bronze_paths_are_profile_scoped(registry: ProfileRegistry) -> N
         assert profile.profile_id in str(profile.config.paths.bronze_api_responses), (
             profile.profile_id
         )
-        assert profile.profile_id in str(profile.config.paths.bronze_manifests), (
-            profile.profile_id
-        )
+        assert profile.profile_id in str(profile.config.paths.bronze_manifests), profile.profile_id
 
 
 def test_nsclc_taxonomy_maps_histologies(registry: ProfileRegistry) -> None:
