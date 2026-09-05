@@ -17,6 +17,7 @@ pairs as (
     select
         a.nct_id as nct_id_a,
         b.nct_id as nct_id_b,
+        a.indication_profile_id as indication_profile_id,
         a.phase_normalized as a_phase, b.phase_normalized as b_phase,
         a.enrollment_band as a_enrollment_band, b.enrollment_band as b_enrollment_band,
         case when len(list_intersect(a.condition_groups, b.condition_groups)) > 0
@@ -43,6 +44,7 @@ pairs as (
     from {{ ref('int_trial_comparability_features') }} a
     inner join {{ ref('int_trial_comparability_features') }} b
         on a.nct_id != b.nct_id
+        and a.indication_profile_id = b.indication_profile_id
 ),
 
 scored as (
@@ -66,6 +68,7 @@ select
     {{ generate_surrogate_key(['nct_id_a', 'nct_id_b']) }} as trial_similarity_key,
     nct_id_a,
     nct_id_b,
+    indication_profile_id,
     similarity_score,
     row_number() over (
         partition by nct_id_a order by similarity_score desc, nct_id_b

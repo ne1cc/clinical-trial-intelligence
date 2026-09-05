@@ -103,6 +103,7 @@ def trial_explorer() -> pd.DataFrame:
         """
         select
             d.nct_id,
+            d.indication_profile_id,
             d.registry_url,
             d.current_brief_title as brief_title,
             d.current_overall_status as overall_status,
@@ -121,6 +122,33 @@ def trial_explorer() -> pd.DataFrame:
         order by d.study_first_post_date desc nulls last, d.nct_id
         """
     )
+
+
+@st.cache_data(ttl=600)
+def get_indication_profiles() -> list[dict[str, str]]:
+    """Return available indication profiles present in dim_trial."""
+    df = query(
+        "select distinct indication_profile_id from main_marts.dim_trial "
+        "where indication_profile_id is not null order by 1"
+    )
+    from src.profiles import get_registry
+
+    try:
+        reg = get_registry()
+    except Exception:
+        reg = None
+
+    results = []
+    for pid in df["indication_profile_id"].dropna():
+        pid_str = str(pid)
+        display = pid_str
+        if reg:
+            try:
+                display = reg.get(pid_str).display_name
+            except KeyError:
+                pass
+        results.append({"id": pid_str, "display_name": display})
+    return results
 
 
 def data_reliability() -> pd.DataFrame:

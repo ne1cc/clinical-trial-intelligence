@@ -10,6 +10,7 @@ with current_trials as (
 trial_fields as (
     select
         t.nct_id,
+        t.indication_profile_id,
         t.phase_normalized,
         t.study_type,
         t.allocation,

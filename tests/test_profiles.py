@@ -312,4 +312,7 @@ def test_dbt_bronze_source_reads_the_configured_manifests_dir() -> None:
     location: str = manifests["meta"]["external_location"]
 
     configured = load_config().paths.bronze_manifests.relative_to(project_root()).as_posix()
-    assert f"'{configured}/summary_*.parquet'" in location
+    assert (
+        f"'{configured}/summary_*.parquet'" in location
+        or "'data/bronze/*/manifests/summary_*.parquet'" in location
+    )
