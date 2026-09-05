@@ -18,18 +18,14 @@ class IngestParams(Config):
         "as raw JSON pages plus a signed ingestion manifest."
     ),
 )
-def ctg_raw_pages(
-    context: AssetExecutionContext, config: IngestParams
-) -> MaterializeResult[None]:
+def ctg_raw_pages(context: AssetExecutionContext, config: IngestParams) -> MaterializeResult[None]:
     manifest = run_ingestion(
         condition=config.condition,
         full_refresh=config.full_refresh,
         max_pages=config.max_pages,
     )
     if manifest.status == "failed":
-        raise RuntimeError(
-            f"Ingestion run {manifest.ingestion_run_id} failed: {manifest.error}"
-        )
+        raise RuntimeError(f"Ingestion run {manifest.ingestion_run_id} failed: {manifest.error}")
     context.log.info(
         f"Ingestion run {manifest.ingestion_run_id} status={manifest.status} "
         f"records={manifest.record_count} pages={manifest.page_count}"

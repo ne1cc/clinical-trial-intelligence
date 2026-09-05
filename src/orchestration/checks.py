@@ -22,8 +22,7 @@ def manifest_integrity() -> AssetCheckResult:
         )
     latest = max(success_runs, key=lambda m: m.ingestion_run_id)
     counts_agree = (
-        latest.total_count_reported is None
-        or latest.record_count == latest.total_count_reported
+        latest.total_count_reported is None or latest.record_count == latest.total_count_reported
     )
     passed = latest.record_count > 0 and latest.page_count > 0 and counts_agree
     return AssetCheckResult(

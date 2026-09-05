@@ -25,9 +25,7 @@ def _success_manifest() -> IngestionManifest:
     )
 
 
-def test_bronze_asset_writes_manifest_and_materializes(
-    project_root_tmp, monkeypatch
-) -> None:
+def test_bronze_asset_writes_manifest_and_materializes(project_root_tmp, monkeypatch) -> None:
     manifest = _success_manifest()
 
     def fake_run_ingestion(condition=None, full_refresh=False, max_pages=None):
@@ -37,9 +35,7 @@ def test_bronze_asset_writes_manifest_and_materializes(
         write_manifest(cfg.paths.bronze_manifests, manifest)
         return manifest
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion
-    )
+    monkeypatch.setattr("src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion)
     result = materialize(
         assets=[ctg_raw_pages],
         run_config={"ops": {"ctg_raw_pages": {"config": IngestParams().model_dump()}}},
@@ -55,9 +51,7 @@ def test_bronze_asset_raises_on_failed_run(project_root_tmp, monkeypatch) -> Non
     def fake_run_ingestion(condition=None, full_refresh=False, max_pages=None):
         return manifest
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion
-    )
+    monkeypatch.setattr("src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion)
     result = materialize(
         assets=[ctg_raw_pages],
         run_config={"ops": {"ctg_raw_pages": {"config": IngestParams().model_dump()}}},
@@ -75,9 +69,7 @@ def test_manifest_integrity_passes_on_success_run(project_root_tmp, monkeypatch)
         write_manifest(load_config().paths.bronze_manifests, manifest)
         return manifest
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion
-    )
+    monkeypatch.setattr("src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion)
     result = materialize_with_checks(
         assets=[ctg_raw_pages],
         asset_checks=[manifest_integrity],
@@ -87,9 +79,7 @@ def test_manifest_integrity_passes_on_success_run(project_root_tmp, monkeypatch)
     assert evaluation is not None and evaluation.passed
 
 
-def test_manifest_integrity_fails_when_counts_disagree(
-    project_root_tmp, monkeypatch
-) -> None:
+def test_manifest_integrity_fails_when_counts_disagree(project_root_tmp, monkeypatch) -> None:
     manifest = _success_manifest().model_copy(
         update={"record_count": 3, "total_count_reported": 999}
     )
@@ -100,9 +90,7 @@ def test_manifest_integrity_fails_when_counts_disagree(
         write_manifest(load_config().paths.bronze_manifests, manifest)
         return manifest
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion
-    )
+    monkeypatch.setattr("src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion)
     result = materialize_with_checks(
         assets=[ctg_raw_pages],
         asset_checks=[manifest_integrity],
@@ -113,17 +101,13 @@ def test_manifest_integrity_fails_when_counts_disagree(
     assert evaluation is not None and not evaluation.passed
 
 
-def test_manifest_integrity_fails_with_no_success_runs(
-    project_root_tmp, monkeypatch
-) -> None:
+def test_manifest_integrity_fails_with_no_success_runs(project_root_tmp, monkeypatch) -> None:
     manifest = _success_manifest()
 
     def fake_run_ingestion(condition=None, full_refresh=False, max_pages=None):
         return manifest  # returns, but never writes a manifest file
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion
-    )
+    monkeypatch.setattr("src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion)
     result = materialize_with_checks(
         assets=[ctg_raw_pages],
         asset_checks=[manifest_integrity],
@@ -141,9 +125,7 @@ def _patch_quiet_bronze(monkeypatch) -> None:
     def fake_run_ingestion(condition=None, full_refresh=False, max_pages=None):
         return manifest
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion
-    )
+    monkeypatch.setattr("src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion)
 
 
 def _seed_reconcilable_state() -> None:
@@ -176,27 +158,19 @@ def _seed_reconcilable_state() -> None:
     cfg.paths.duckdb.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(cfg.paths.duckdb))
     con.execute("create schema main_marts")
-    con.execute(
-        "create table main_marts.dim_trial as select 'NCT00000001' as nct_id"
-    )
-    con.execute(
-        "create table main_marts.fct_trial_snapshot as select false as current_record_flag"
-    )
+    con.execute("create table main_marts.dim_trial as select 'NCT00000001' as nct_id")
+    con.execute("create table main_marts.fct_trial_snapshot as select false as current_record_flag")
     con.close()
 
 
-def test_silver_asset_materializes_processed_runs(
-    project_root_tmp, monkeypatch
-) -> None:
+def test_silver_asset_materializes_processed_runs(project_root_tmp, monkeypatch) -> None:
     _seed_reconcilable_state()
     _patch_quiet_bronze(monkeypatch)
 
     def fake_run_transform(run_id=None, force=False):
         return ["20260904T120000Z_abc12345"]
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.silver.run_transform", fake_run_transform
-    )
+    monkeypatch.setattr("src.orchestration.assets.silver.run_transform", fake_run_transform)
     result = materialize(
         assets=[ctg_raw_pages, silver_entities],
         run_config={"ops": {"ctg_raw_pages": {"config": IngestParams().model_dump()}}},
@@ -205,18 +179,14 @@ def test_silver_asset_materializes_processed_runs(
     assert len(result.get_asset_materialization_events()) == 2
 
 
-def test_reconciliation_check_passes_on_consistent_state(
-    project_root_tmp, monkeypatch
-) -> None:
+def test_reconciliation_check_passes_on_consistent_state(project_root_tmp, monkeypatch) -> None:
     _seed_reconcilable_state()
     _patch_quiet_bronze(monkeypatch)
 
     def fake_run_transform(run_id=None, force=False):
         return ["20260904T120000Z_abc12345"]
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.silver.run_transform", fake_run_transform
-    )
+    monkeypatch.setattr("src.orchestration.assets.silver.run_transform", fake_run_transform)
     result = materialize_with_checks(
         assets=[ctg_raw_pages, silver_entities],
         asset_checks=[cross_layer_reconciliation],
@@ -226,17 +196,13 @@ def test_reconciliation_check_passes_on_consistent_state(
     assert evaluation is not None and evaluation.passed
 
 
-def test_reconciliation_check_fails_when_silver_missing(
-    project_root_tmp, monkeypatch
-) -> None:
+def test_reconciliation_check_fails_when_silver_missing(project_root_tmp, monkeypatch) -> None:
     _patch_quiet_bronze(monkeypatch)
 
     def fake_run_transform(run_id=None, force=False):
         return ["20260904T120000Z_abc12345"]
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.silver.run_transform", fake_run_transform
-    )
+    monkeypatch.setattr("src.orchestration.assets.silver.run_transform", fake_run_transform)
     result = materialize_with_checks(
         assets=[ctg_raw_pages, silver_entities],
         asset_checks=[cross_layer_reconciliation],

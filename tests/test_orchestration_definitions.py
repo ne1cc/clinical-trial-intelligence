@@ -66,12 +66,8 @@ def test_failed_bronze_check_blocks_silver(project_root_tmp, monkeypatch) -> Non
     def fake_run_transform(run_id=None, force=False):
         raise AssertionError("silver must not run when the bronze check fails")
 
-    monkeypatch.setattr(
-        "src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion
-    )
-    monkeypatch.setattr(
-        "src.orchestration.assets.silver.run_transform", fake_run_transform
-    )
+    monkeypatch.setattr("src.orchestration.assets.bronze.run_ingestion", fake_run_ingestion)
+    monkeypatch.setattr("src.orchestration.assets.silver.run_transform", fake_run_transform)
     result = materialize_with_checks(
         assets=[ctg_raw_pages, silver_entities],
         asset_checks=[manifest_integrity, cross_layer_reconciliation],

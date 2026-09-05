@@ -43,9 +43,7 @@ def materialize_with_checks(*, assets, asset_checks, run_config=None, raise_on_e
 
     defs = Definitions(assets=list(assets), asset_checks=list(asset_checks))
     job = defs.resolve_implicit_global_asset_job_def()
-    return job.execute_in_process(
-        run_config=run_config or {}, raise_on_error=raise_on_error
-    )
+    return job.execute_in_process(run_config=run_config or {}, raise_on_error=raise_on_error)
 
 
 def check_evaluation(result, check_name):
@@ -66,15 +64,31 @@ def dbt_manifest(tmp_path_factory: pytest.TempPathFactory) -> Path:
         )
     if (dbt_dir / "packages.yml").exists():
         subprocess.run(
-            ["uv", "run", "dbt", "deps", "--project-dir", str(dbt_dir),
-             "--profiles-dir", str(dbt_dir)],
+            [
+                "uv",
+                "run",
+                "dbt",
+                "deps",
+                "--project-dir",
+                str(dbt_dir),
+                "--profiles-dir",
+                str(dbt_dir),
+            ],
             cwd=root,
             check=True,
             capture_output=True,
         )
     subprocess.run(
-        ["uv", "run", "dbt", "parse", "--project-dir", str(dbt_dir),
-         "--profiles-dir", str(dbt_dir)],
+        [
+            "uv",
+            "run",
+            "dbt",
+            "parse",
+            "--project-dir",
+            str(dbt_dir),
+            "--profiles-dir",
+            str(dbt_dir),
+        ],
         cwd=root,
         check=True,
         capture_output=True,

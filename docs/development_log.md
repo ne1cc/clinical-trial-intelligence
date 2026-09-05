@@ -240,7 +240,7 @@ dropped; all mapping logic lives in version-controlled YAML.
    missing-data shares).
 8. **Wrote schema tests** (`_staging.yml`, `_marts.yml`) — not_null / unique /
    accepted_values / relationships across keys and grains — plus **5 singular
-   tests**: `assert_valid_study_dates` (warn), 
+   tests**: `assert_valid_study_dates` (warn),
    `assert_one_current_record_per_trial`,
    `assert_trial_site_relationship_integrity`, `assert_valid_us_state`,
    `assert_snapshot_completeness` (warn).
