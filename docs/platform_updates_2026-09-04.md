@@ -21,7 +21,7 @@ interviewers look for.
 | Where data lives | Only your laptop (and the Fly volume) | Also a durable cloud bucket (Google Cloud Storage) |
 | If something breaks | You'd only notice when you next look | The run fails visibly, retries, and never publishes bad data |
 | Proving data quality | Tests exist but don't run in CI against real dbt models | CI builds the models and runs all 73 dbt tests on every push |
-| Code style safety | Ruff lint only | Ruff + type checking + pre-commit hooks that run before every commit |
+| Code style safety | Ruff lint only | Ruff + type checking + pre-commit hooks (after a one-time `pre-commit install`) |
 | Schema changes | A changed column could silently break dashboards | Contracts make the build fail loudly instead |
 | Warehouse | DuckDB only | DuckDB + BigQuery (free tier) from the same dbt code |
 
@@ -59,8 +59,9 @@ Data contracts are one of the most-discussed ideas in data engineering right now
 
 **mypy (type checking) + pre-commit.** mypy reads your Python code and flags
 places where a variable might not be the type you think it is — it catches bugs
-before running anything. pre-commit runs quick checks automatically right before
-each git commit, so style and type problems never make it into the repo.
+before running anything. After a one-time `pre-commit install`, pre-commit runs
+quick checks automatically right before each git commit, so style and type
+problems never make it into the repo.
 
 **dbt build in CI, on fixture data.** CI will carry a tiny handmade dataset
 (~10 fake trials covering every status and phase). Every push to GitHub builds

@@ -64,5 +64,6 @@ select = ["E", "F", "I", "W", "UP", "B"]
 
 [tool.mypy]
 python_version = "3.12"
+# src/transform deliberately excluded: pandas annotation churn (recorded known gap per spec).
 files = ["src/orchestration", "src/ingest", "src/utils", "src/quality"]
 strict = true

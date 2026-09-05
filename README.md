@@ -138,7 +138,8 @@ uv run dagster job execute -m src.orchestration.definitions -j weekly_refresh
 ```
 
 Headless execution hits the real ClinicalTrials.gov API; local `dagster dev` is for
-inspection, manual materializations, and backfills.
+inspection, manual materializations, and ad-hoc re-runs (backfills are deliberately
+not part of the design).
 
 ## 15. How to start the Streamlit dashboard
 
