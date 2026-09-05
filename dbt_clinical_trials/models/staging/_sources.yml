@@ -29,4 +29,4 @@ sources:
       - name: ingestion_manifests
         description: One row per ingestion run (Parquet summaries).
         meta:
-          external_location: "read_parquet('data/bronze/manifests/summary_*.parquet', union_by_name=true)"
+          external_location: "read_parquet('data/bronze/adrd/manifests/summary_*.parquet', union_by_name=true)"

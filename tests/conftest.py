@@ -9,8 +9,8 @@ CONFIG_YAML = """
 api:
   base_url: "https://clinicaltrials.gov/api/v2"
 paths:
-  bronze_api_responses: "data/bronze/api_responses"
-  bronze_manifests: "data/bronze/manifests"
+  bronze_api_responses: "data/bronze/adrd/api_responses"
+  bronze_manifests: "data/bronze/adrd/manifests"
   silver: "data/silver"
   gold: "data/gold"
   duckdb: "data/warehouse/clinical_trials.duckdb"
@@ -132,14 +132,14 @@ def fixture_project_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
         )
         from src.utils.dates import utc_now
 
-        run_dir = root / "data/bronze/api_responses" / f"run_id={FIXTURE_RUN_ID}"
+        cfg = load_config()
+        run_dir = cfg.paths.bronze_api_responses / f"run_id={FIXTURE_RUN_ID}"
         run_dir.mkdir(parents=True)
         shutil.copy(
             Path(__file__).parent / "fixtures/bronze_snapshot/page=00001.json",
             run_dir / "page=00001.json",
         )
 
-        cfg = load_config()
         manifest = IngestionManifest(
             ingestion_run_id=FIXTURE_RUN_ID,
             query_hash="fixturequeryhash0001",

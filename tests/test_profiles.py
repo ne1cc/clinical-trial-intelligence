@@ -266,3 +266,50 @@ def test_build_silver_dedup_key_uses_profile_id(tmp_path: Path) -> None:
         rows_pk["silver_trials"][0]["indication_profile_id"],
     )
     assert key_adrd != key_pk
+
+
+# ---------------------------------------------------------------------------
+# Default config and the adrd profile must agree on the bronze root
+# ---------------------------------------------------------------------------
+
+
+def test_default_config_bronze_paths_match_the_adrd_profile() -> None:
+    """Guard the ingest/transform pairing that `make pipeline` depends on.
+
+    `ingest --profile default` resolves through the registry to the adrd profile
+    and writes profile-scoped bronze, while `transform` and the quality readers
+    load the global config. If the two disagree, `make pipeline` ingests
+    snapshots the transform never sees and exits 0 with "No runs to transform",
+    so the warehouse goes stale silently.
+    """
+    from src.config import load_config
+    from src.profiles import get_registry
+
+    default = load_config()
+    adrd = get_registry().get("adrd").config
+
+    assert default.paths.bronze_manifests == adrd.paths.bronze_manifests
+    assert default.paths.bronze_api_responses == adrd.paths.bronze_api_responses
+    assert default.paths.quarantine == adrd.paths.quarantine
+
+
+def test_dbt_bronze_source_reads_the_configured_manifests_dir() -> None:
+    """dbt cannot import src.config, so _sources.yml repeats the manifests root
+    as a literal string. This test is the seam that keeps the two from drifting
+    apart again."""
+    import yaml
+
+    from src.config import load_config
+    from src.utils.paths import project_root
+
+    sources = yaml.safe_load(
+        (project_root() / "dbt_clinical_trials/models/staging/_sources.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    bronze = next(s for s in sources["sources"] if s["name"] == "bronze")
+    manifests = next(t for t in bronze["tables"] if t["name"] == "ingestion_manifests")
+    location: str = manifests["meta"]["external_location"]
+
+    configured = load_config().paths.bronze_manifests.relative_to(project_root()).as_posix()
+    assert f"'{configured}/summary_*.parquet'" in location
