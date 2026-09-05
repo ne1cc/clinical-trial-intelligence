@@ -5,6 +5,11 @@ data/silver/*
 data/gold/*
 data/warehouse/*.duckdb
 data/warehouse/*.duckdb.wal
+# Opt-in full-catalog ingestion profile (config/full_catalog_config.yml)
+data/bronze_full_catalog/api_responses/*
+data/bronze_full_catalog/manifests/*
+data/silver_full_catalog/*
+data/gold_full_catalog/*
 !data/**/.gitkeep
 
 # Environment / secrets
@@ -16,7 +21,9 @@ data/warehouse/*.duckdb.wal
 __pycache__/
 *.py[cod]
 *.egg-info/
-.venv/
+# no trailing slash: worktrees symlink .venv to a shared checkout, and a
+# symlink does not match a directory-only pattern
+.venv
 venv/
 .pytest_cache/
 .coverage

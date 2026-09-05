@@ -451,3 +451,125 @@ one build's output, not standing findings.
 **Project complete.** All seven phases delivered and verified: ingestion
 (bronze), normalization (silver), dbt marts + tests (gold), quality
 framework, dashboard, and documentation.
+
+---
+
+## Phase 8 — Opt-in full-catalog ingestion profile (bronze) (2026-09-04)
+
+**Goal:** add an opt-in ingestion profile that snapshots the *entire*
+ClinicalTrials.gov registry (all conditions, worldwide, no status/type
+filter, ~600k+ studies per live `countTotal`) into a completely separate
+bronze tree, with zero effect on the default ADRD/US pipeline, dbt marts,
+or dashboard. Deliberately bronze-only in this phase — a precursor to the
+planned chunked/partitioned silver transform (see `docs/architecture.md`
+§6 "Scaling path").
+
+### Step 8.1 — Design: a config-only profile
+
+Chose to express the new scope purely as configuration, reusing every
+ingestion primitive (`CTGClient`, `iter_pages`, manifest/reuse/quarantine
+logic) rather than forking an ingestion path:
+
+- `config/full_catalog_config.yml` — new profile with intentionally
+  empty `api.query_params: {}` (the CTG API's default scope is "all
+  studies", so no `query.cond`/`filter.*` keys are sent),
+  `page_size: 1000` (API maximum; keeps page count near ~600 for
+  ~600k+ studies), `http.timeout_seconds: 120` (1000-study pages
+  transfer slower than the default profile's 30s pages), and
+  `reuse_window_hours: 720` (monthly effective cadence; a full-registry
+  re-pull is far more expensive than the default profile's 24h window
+  assumes).
+- Parallel paths: `data/bronze_full_catalog/{api_responses,manifests}`,
+  with reserved-but-unused `data/silver_full_catalog`, `data/gold_full_catalog`,
+  and `data/warehouse/clinical_trials_full_catalog.duckdb` entries so
+  `PathsConfig` validation still passes. All gitignored.
+- Isolation guarantee: `run_ingestion` accepts an optional `config`
+  override and uses it for *all* paths/API settings; the default
+  transform/dbt/dashboard read only `data/bronze/manifests/` via
+  `get_config()`, so a full-catalog run cannot leak into any downstream
+  artifact.
+- Lineage: `IngestionManifest` gained a `profile` field
+  (`"default"` / `"full-catalog"`) so every run record states which
+  scope produced it.
+
+### Step 8.2 — Implementation
+
+- `src/cli.py` — `ingest` gained `--profile {default,full-catalog}`;
+  when `full-catalog`, `main()` loads
+  `config/full_catalog_config.yml` via `load_config(path)` and passes it
+  plus the profile name to `run_ingestion`. Default profile passes
+  `config=None` (existing `get_config()` fallback unchanged).
+- `src/ingest/extract_studies.py` — new `profile` parameter threaded
+  into the manifest; `cfg = config or get_config()` already covered the
+  config-override need.
+- `src/ingest/snapshot_manifest.py` — `profile: str = "default"` field.
+- `Makefile` — `ingest-full-catalog` and `full-catalog-full-refresh`
+  targets; `setup` also creates the full-catalog bronze directories.
+- `.gitignore` — new bronze/silver/gold full-catalog trees ignored;
+  `.venv/` pattern changed to `.venv` because worktrees symlink `.venv`
+  to a shared checkout and a symlink does not match a directory-only
+  pattern.
+
+### Step 8.3 — Tests
+
+- `tests/test_cli.py` — parser defaults to `default`; `--profile
+  full-catalog` parses; `main()` end-to-end (with `run_ingestion`
+  monkeypatched) passes `profile="full-catalog"` plus a config whose
+  `paths.bronze_manifests` ends in `bronze_full_catalog/manifests`;
+  default path passes `config=None`.
+- `tests/test_config.py` — full-catalog config has empty query params,
+  `page_size == 1000`, and paths disjoint from the default config.
+- `tests/test_ctg_client.py` — with empty `query_params`, `build_params`
+  emits no `query.cond`/`filter.overallStatus`/`filter.advanced` keys.
+- `tests/test_snapshot_manifest.py` — `profile` defaults and overrides.
+
+### Step 8.4 — Documentation
+
+- `README.md` — new §7a documenting the opt-in profile, its bronze-only
+  status, and the isolation guarantee; setup section cross-links it.
+- `docs/architecture.md` §6 — marks full-catalog bronze ingestion as
+  *implemented (opt-in)* and names the blocking constraint for the next
+  phase: `build_silver_entities.py` materializes an entire run in pandas
+  before writing Parquet, so ~600k-study silver transforms need
+  chunked/partitioned streaming first.
+- `config/project_config.yml` — comment cross-referencing the profile.
+
+### Verification (2026-09-04, worktree `scale-more-records`)
+
+| Check | Command | Result |
+|---|---|---|
+| Unit tests | `uv run pytest -q -rs` | 61 passed, 8 skipped |
+| Lint | `make lint` (ruff on src/tests/dashboard) | clean |
+
+The 8 skips are `tests/test_dashboard_smoke.py` marts-not-built skips —
+pre-existing behavior in a worktree without a built warehouse, unrelated
+to this change.
+
+### Decisions and rationale
+
+- **Bronze-only scope.** Silver/gold/dbt cannot consume this volume yet;
+  forcing it through the current pandas-materializing transform risks
+  OOM and would silently expand every mart's grain. Deferring is
+  documented, not hidden.
+- **Config-only profile, no code fork.** The smallest change that gets
+  full-registry snapshots: one YAML file, one CLI flag, one manifest
+  field. All reuse/quarantine/summary machinery applies unchanged.
+
+### Known limitations and open questions
+
+- No CLI guard against combining `--condition` with `--profile
+  full-catalog`; the Makefile targets never do this, but a direct CLI
+  call could produce a run labeled `full-catalog` that is actually
+  condition-filtered. Flagged as an open question (small validation in
+  `cli.py` or `run_ingestion` would close it).
+- Full-catalog data reaches nothing downstream yet by design; the
+  profile is inert until the chunked transform phase.
+- `config/full_catalog_config.yml` is currently untracked and must be
+  included in the Phase 8 commit.
+
+### Next step
+
+Chunked/partitioned silver transform (stream `build_silver_entities.py`
+and `export_parquet.py` batch-wise), then extend
+`condition_taxonomy.yml` / `geography_rules.yml` beyond ADRD/US so the
+full-catalog bronze data can reach the marts.

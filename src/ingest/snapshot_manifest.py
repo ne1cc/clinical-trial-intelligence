@@ -25,6 +25,7 @@ class IngestionManifest(BaseModel):
     condition: str | None = None
     params: dict[str, str]
     mode: str = "incremental"
+    profile: str = "default"  # which ingestion profile produced this run (e.g. "full-catalog")
     status: str = "running"  # running | success | failed
     started_at_utc: datetime
     ended_at_utc: datetime | None = None

@@ -77,6 +77,18 @@ erDiagram
 - **Phases:** EARLY_PHASE1 – PHASE4 where available.
 - **Cadence:** Weekly snapshots; history accrues from this project's own runs.
 
+## 7a. Optional: full-catalog ingestion
+
+An opt-in, additive ingestion profile snapshots the **entire** ClinicalTrials.gov
+registry — all conditions, worldwide, no status/type filter (~600k+ studies as of
+this writing). Run it with `make ingest-full-catalog`. It writes to a completely
+separate bronze tree (`data/bronze_full_catalog/`, `config/full_catalog_config.yml`)
+and cannot interfere with the default ADRD/US pipeline above.
+
+**Bronze only — not yet reflected in silver, gold, dbt marts, or the dashboard.**
+It's the first step toward scaling this project beyond a single therapeutic area;
+see [`docs/architecture.md`](docs/architecture.md) for the planned follow-on work.
+
 ## 8. Setup instructions
 
 Prerequisites: Python 3.11+, [uv](https://docs.astral.sh/uv/), `make`.
@@ -103,6 +115,8 @@ public. Variables control local paths, logging, and optional HTTP overrides.
 ```bash
 make ingest                      # python -m src.cli ingest --condition "Alzheimer Disease"
 ```
+
+For the opt-in full-catalog profile instead, see [section 7a](#7a-optional-full-catalog-ingestion).
 
 ## 12. How to run repeat snapshots
 

@@ -34,6 +34,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional page cap for smoke tests (partial runs stay marked incomplete-by-cap).",
     )
+    ingest.add_argument(
+        "--profile",
+        choices=["default", "full-catalog"],
+        default="default",
+        help="Ingestion scope profile. 'full-catalog' fetches all conditions worldwide "
+        "into a separate bronze tree (config/full_catalog_config.yml); it is "
+        "additive and does not affect the default ADRD/US pipeline.",
+    )
 
     transform = subparsers.add_parser(
         "transform", help="Flatten bronze JSON runs into normalized silver Parquet entities."
@@ -66,13 +74,21 @@ def main(argv: list[str] | None = None) -> int:
     log = setup_logging()
 
     if args.command == "ingest":
+        from src.config import load_config
         from src.ingest.extract_studies import run_ingestion
 
         try:
+            config = (
+                load_config("config/full_catalog_config.yml")
+                if args.profile == "full-catalog"
+                else None
+            )
             manifest = run_ingestion(
                 condition=args.condition,
                 full_refresh=args.full_refresh,
                 max_pages=args.max_pages,
+                profile=args.profile,
+                config=config,
             )
         except Exception as exc:
             log.error("Ingestion failed: {}", exc)

@@ -34,6 +34,11 @@ def make_manifest(**overrides) -> IngestionManifest:
     return IngestionManifest(**defaults)
 
 
+def test_manifest_profile_defaults_and_overrides():
+    assert make_manifest().profile == "default"
+    assert make_manifest(profile="full-catalog").profile == "full-catalog"
+
+
 def test_new_run_id_shape_and_uniqueness():
     ids = {new_run_id() for _ in range(50)}
     assert len(ids) == 50

@@ -32,6 +32,7 @@ def run_ingestion(
     condition: str | None = None,
     full_refresh: bool = False,
     max_pages: int | None = None,
+    profile: str = "default",
     config: ProjectConfig | None = None,
 ) -> IngestionManifest:
     log = setup_logging()
@@ -66,6 +67,7 @@ def run_ingestion(
             condition=params.get("query.cond"),
             params=params,
             mode="full_refresh" if full_refresh else "incremental",
+            profile=profile,
             status="running",
             started_at_utc=utc_now(),
         )

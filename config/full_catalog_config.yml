@@ -1,0 +1,75 @@
+# ============================================================
+# Opt-in full-catalog ingestion profile.
+#
+# All conditions, worldwide — no condition/status/study-type filter.
+# Runs completely alongside the default ADRD/US profile
+# (config/project_config.yml) with its own bronze tree, so it cannot
+# interfere with the default pipeline, dbt marts, or dashboard.
+#
+# Scope: ingestion (bronze) only as of this phase. Not wired into
+# silver/gold/dbt/dashboard — see docs/architecture.md "Full-catalog
+# ingestion" for the planned chunked/partitioned transform phase that
+# will eventually consume this data.
+#
+# Run with: make ingest-full-catalog
+# ============================================================
+
+project:
+  name: cti-dashboard-full-catalog
+  description: >-
+    Opt-in, all-conditions/worldwide bronze snapshot of the full
+    ClinicalTrials.gov registry. Ingestion-layer only in this phase.
+  timezone: UTC
+
+api:
+  base_url: https://clinicaltrials.gov/api/v2
+  studies_endpoint: /studies
+  openapi_spec_url: https://clinicaltrials.gov/api/oas/v2
+  docs_url: https://clinicaltrials.gov/data-api/api
+  format: json
+  page_size: 1000            # API max — keeps page count near ~600 for ~600k+ studies (confirmed via live countTotal)
+  count_total: true
+  # Intentionally empty: no query.cond / filter.* — CTG's API default is "all studies"
+  query_params: {}
+  http:
+    timeout_seconds: 120      # larger 1000-study pages take longer to transfer than the default profile's 30s
+    max_retries: 5
+    backoff_initial_seconds: 1
+    backoff_max_seconds: 60
+    retry_on_status: [429, 500, 502, 503, 504]
+
+scope:
+  therapeutic_area: "All conditions (no filter)"
+  geography: "Worldwide (no filter)"
+  study_type: "ALL (no filter)"
+  statuses: []                # empty = no overallStatus filter
+  refresh_cadence: monthly    # descriptive only, not enforced by code
+  history_note: >-
+    Full-registry bronze snapshot. Ingestion (bronze) only as of this
+    phase; silver/gold/dbt/dashboard remain scoped to the default
+    ADRD/US profile until a later, separately planned chunked-loading
+    phase extends transform to this volume.
+
+paths:
+  bronze_api_responses: data/bronze_full_catalog/api_responses
+  bronze_manifests: data/bronze_full_catalog/manifests
+  silver: data/silver_full_catalog       # unused this phase; reserved for later transform work
+  gold: data/gold_full_catalog           # unused this phase
+  duckdb: data/warehouse/clinical_trials_full_catalog.duckdb   # unused this phase
+  quarantine: data/bronze_full_catalog/manifests/quarantine
+
+ingestion:
+  mode_default: incremental
+  # Longer than the default profile's 24h: a full-catalog run is far more
+  # expensive to redo, and this profile's cadence is monthly, not weekly.
+  reuse_window_hours: 720
+  page_file_pattern: "run_id={run_id}/page={page:05d}.json"
+  manifest_file_pattern: "manifest_{run_id}.json"
+
+guardrails:
+  disclaimer: >-
+    Public-registry-based full-catalog snapshot for analytical
+    portfolio demonstration only. Bronze (raw) data only in this
+    phase — not reflected in any dashboard, dbt mart, or quality
+    report until a later phase implements chunked/partitioned
+    transform for this volume.
