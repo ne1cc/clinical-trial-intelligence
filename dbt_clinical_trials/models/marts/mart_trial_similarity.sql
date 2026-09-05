@@ -3,16 +3,13 @@
 -- most comparable trials. A structural/design comparability signal --
 -- NOT a claim of clinical equivalence, and NOT itself a competition or
 -- recruitment signal. Weights live in the similarity_score_weights seed
--- (mirrored in config/similarity_weights.yml).
+-- (mirrored in config/similarity_weights.yml). The factor list lives in
+-- the similarity_components macro.
 with weights as (
     select
-        max(case when component = 'same_condition' then weight end) as w_condition,
-        max(case when component = 'same_phase' then weight end) as w_phase,
-        max(case when component = 'geography_overlap' then weight end) as w_geography,
-        max(case when component = 'intervention_type_overlap' then weight end) as w_intervention,
-        max(case when component = 'study_design_match' then weight end) as w_design,
-        max(case when component = 'eligibility_compatible' then weight end) as w_eligibility,
-        max(case when component = 'enrollment_band_match' then weight end) as w_enrollment
+        {% for c in similarity_components() %}
+        max(case when component = '{{ c }}' then weight end) as w_{{ c }}{{ "," if not loop.last }}
+        {% endfor %}
     from {{ ref('similarity_score_weights') }}
 ),
 
@@ -51,30 +48,16 @@ pairs as (
 scored as (
     select
         p.*,
-        w.w_condition as weight_same_condition,
-        w.w_phase as weight_same_phase,
-        w.w_geography as weight_geography_overlap,
-        w.w_intervention as weight_intervention_type_overlap,
-        w.w_design as weight_study_design_match,
-        w.w_eligibility as weight_eligibility_compatible,
-        w.w_enrollment as weight_enrollment_band_match,
-        round(w.w_condition * p.same_condition, 4) as weighted_same_condition,
-        round(w.w_phase * p.same_phase, 4) as weighted_same_phase,
-        round(w.w_geography * p.geography_overlap, 4) as weighted_geography_overlap,
-        round(w.w_intervention * p.intervention_type_overlap, 4) as weighted_intervention_type_overlap,
-        round(w.w_design * p.study_design_match, 4) as weighted_study_design_match,
-        round(w.w_eligibility * p.eligibility_compatible, 4) as weighted_eligibility_compatible,
-        round(w.w_enrollment * p.enrollment_band_match, 4) as weighted_enrollment_band_match,
+        {% for c in similarity_components() %}
+        w.w_{{ c }} as weight_{{ c }},
+        round(w.w_{{ c }} * p.{{ c }}, 4) as weighted_{{ c }},
+        {% endfor %}
         round(
-            w.w_condition * p.same_condition
-            + w.w_phase * p.same_phase
-            + w.w_geography * p.geography_overlap
-            + w.w_intervention * p.intervention_type_overlap
-            + w.w_design * p.study_design_match
-            + w.w_eligibility * p.eligibility_compatible
-            + w.w_enrollment * p.enrollment_band_match,
-            4
-        ) as similarity_score
+            {% for c in similarity_components() %}
+            w.w_{{ c }} * p.{{ c }}
+            {%- if not loop.last %} +{% endif %}
+            {% endfor %}
+        , 4) as similarity_score
     from pairs p
     cross join weights w
 )
@@ -87,13 +70,9 @@ select
     row_number() over (
         partition by nct_id_a order by similarity_score desc, nct_id_b
     ) as similarity_rank,
-    same_condition, weight_same_condition, weighted_same_condition,
-    same_phase, weight_same_phase, weighted_same_phase,
-    geography_overlap, weight_geography_overlap, weighted_geography_overlap,
-    intervention_type_overlap, weight_intervention_type_overlap, weighted_intervention_type_overlap,
-    study_design_match, weight_study_design_match, weighted_study_design_match,
-    eligibility_compatible, weight_eligibility_compatible, weighted_eligibility_compatible,
-    enrollment_band_match, weight_enrollment_band_match, weighted_enrollment_band_match,
+    {% for c in similarity_components() %}
+    {{ c }}, weight_{{ c }}, weighted_{{ c }},
+    {% endfor %}
     concat_ws(
         '; ',
         case when same_condition = 1 then 'shared condition mapping' end,
