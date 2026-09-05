@@ -10,6 +10,7 @@ import duckdb
 from src.config import ProjectConfig, get_config
 from src.ingest.snapshot_manifest import load_manifests
 from src.transform.build_silver_entities import ENTITY_NAMES
+from src.transform.silver_stats import expected_trial_rows, load_transform_stats
 from src.utils.dates import utc_now_iso
 from src.utils.logging import setup_logging
 from src.utils.paths import ensure_dir
@@ -84,16 +85,20 @@ def profile_run(run_id: str, config: ProjectConfig | None = None) -> dict[str, A
     trials = report["entities"].get("silver_trials", {})
     if manifest and "row_count" in trials:
         rows = trials["row_count"]
-        # A shortfall against the manifest is expected: build_silver_for_run
-        # keeps the first occurrence of a repeated NCT ID and drops records
-        # without one. Only losing *more* than bronze holds, or emitting a
-        # repeated NCT ID, indicates a real problem.
+        # build_silver_for_run keeps the first occurrence of a repeated NCT ID
+        # and drops records without one, so the manifest count is not the
+        # expectation. The transform records how many it excluded, which keeps
+        # this exact; without those stats a shortfall is not treated as
+        # explained.
+        expected = expected_trial_rows(load_transform_stats(cfg, run_id), manifest.record_count)
+        expectation = expected if expected is not None else manifest.record_count
         report["reconciliation"] = {
             "manifest_record_count": manifest.record_count,
             "silver_trials_row_count": rows,
             "distinct_nct_ids": trials.get("distinct_nct_ids"),
             "excluded_records": manifest.record_count - rows,
-            "no_unexpected_loss": rows <= manifest.record_count,
+            "expected_silver_rows": expected,
+            "rows_match_expectation": rows == expectation,
             "nct_ids_unique": trials.get("distinct_nct_ids") == rows,
         }
 

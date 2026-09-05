@@ -21,6 +21,7 @@ from src.transform.export_parquet import DEFAULT_FLUSH_ROWS, SilverRunWriter
 from src.transform.flatten_studies import flatten_study, iter_bronze_studies
 from src.transform.normalize_conditions import get_taxonomy
 from src.transform.normalize_locations import get_geography_rules
+from src.transform.silver_stats import write_transform_stats
 from src.utils.logging import setup_logging
 
 if TYPE_CHECKING:
@@ -115,6 +116,15 @@ def build_silver_for_run(
         path = cfg.paths.silver / entity / f"run_id={run_id}.parquet"
         row_counts[entity] = counts[entity]
         log.info("Run {}: wrote {} rows -> {}", run_id, counts[entity], path)
+
+    write_transform_stats(
+        cfg,
+        run_id,
+        record_count=manifest.record_count,
+        row_counts=row_counts,
+        duplicate_nct_ids=duplicate_count,
+        skipped_no_nct_id=skipped_no_nct,
+    )
 
     expected = manifest.record_count - duplicate_count - skipped_no_nct
     if row_counts["silver_trials"] != expected:

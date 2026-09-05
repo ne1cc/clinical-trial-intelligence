@@ -719,7 +719,79 @@ both).
 The 9 skips are the pre-existing `test_dashboard_smoke.py` marts-not-built
 skips, unrelated to this change.
 
-### Live verification
+### Incident during live verification: two flatten columns missing from the schema
 
-To be appended below once the full-catalog re-ingestion + streaming
-transform run completes.
+The default-pipeline regression caught a real bug in the Phase 9 design
+assumption. Planning had recorded "flatten_study emits exactly the
+ENTITY_COLUMNS key sets" — **incomplete**: `flatten_study` emits two extra
+trial columns, `allocation` and `primary_purpose`
+(`src/transform/flatten_studies.py:108-109`). The old pandas export
+silently wrote every emitted key, so the on-disk silver contract always
+included them and dbt staging (`stg_trials`) selects them. The fixed-schema
+writer correctly dropped "unknown" keys — deleting two live columns.
+
+Symptom: `make dbt-run` failed with
+`Binder Error: Referenced column "allocation" not found in FROM clause!`
+(1 model error, 20 skips; 97 downstream dbt tests errored).
+
+Fix (`6f185d7`): add both columns to `ENTITY_COLUMNS["silver_trials"]`
+(string type via the arrow-schema default) and pin the contract with
+`test_flatten_emits_exactly_entity_columns`, which flattens a
+fully-populated synthetic study and asserts every emitted row's keys equal
+`ENTITY_COLUMNS[entity]` — a flatten change without a schema update now
+fails loudly instead of silently losing columns.
+
+Process note: the failed pytest run that preceded this fix was masked by a
+pipe (`pytest | tail`), whose exit status hid the failures and let a
+commit proceed — the failures were the partially-built warehouse in this
+worktree, not the fix, but the command pattern was wrong regardless. Later
+verification runs capture pytest's exit status directly.
+
+### Live verification (2026-09-05 UTC, worktree `feat-chunked-silver-transform`)
+
+Bronze was re-ingested (the 9.7 GB full-catalog tree was lost with the
+deleted worktree; see the environment incident above):
+
+- Run `20260905T184736Z_a62964b0`: **status `success`**, 602 pages,
+  **601,694 records** — exactly `total_count_reported` (`countTotal`), 0
+  quarantined, `profile: full-catalog`. Duration ~6m22s (18:47:36 →
+  18:53:58 UTC), matching the Phase 8 run's shape precisely.
+
+Default ADRD/US pipeline regression (default-profile data copied into the
+fresh worktree):
+
+- Streaming rebuild of run `20260905T012941Z_fe9f104f` reproduced the
+  pandas-written silver **exactly**: 2,618 trials / 5,368 conditions /
+  4,958 interventions / 4,674 sponsors / 25,935 locations / 20,255
+  outcomes — identical counts before and after the writer swap.
+- `make dbt-run`: **32/32 models PASS**; `make dbt-test`: **114/114 tests
+  PASS** against streaming-writer silver.
+- `uv run pytest`: **98 passed, 0 failed, 0 skipped** (dashboard smoke
+  tests now run for real against the rebuilt warehouse).
+
+Full-catalog streaming transform (run `20260905T184736Z_a62964b0`,
+601,694 studies, executed via `/usr/bin/time -l`):
+
+- **Peak RSS 1,058,586,624 bytes ≈ 1.06 GB** (target < 1.5 GB; the old
+  collect-then-materialize approach would have needed tens of GB for
+  this run). Wall time **~7.5 minutes** (~85k studies/min); progress
+  lines at every 100k studies behaved as designed.
+- Rows written: silver_trials **601,694**; conditions 1,081,165;
+  interventions 1,017,756; sponsors 959,315; locations 3,519,911;
+  outcomes 3,755,941. No dedup/skip/reconciliation warnings fired.
+- **Reconciliation: `bronze_manifest_vs_silver_rows` 601,694 == 601,694
+  PASS; `silver_nct_ids_unique` 601,694 == 601,694 PASS** — rows equal
+  distinct NCT IDs equal the manifest count, zero unexpected loss. The
+  `warehouse_exists` check reports `missing` as expected: the
+  full-catalog dbt warehouse is explicitly out of scope this phase
+  (gold/dbt remain default-profile only).
+- Profile JSON (`data/silver_full_catalog/_profiles/profile_…json`)
+  produced by the DuckDB streaming profiler across the 3.76M-row
+  outcomes file without materialization: 32 columns on silver_trials
+  (30 original + `allocation` + `primary_purpose`), distinct NCT counts
+  per child entity (conditions 600,670; interventions 540,752;
+  sponsors 601,694; locations 541,210; outcomes 584,078).
+- Row-group streaming confirmed on disk: silver_trials 13 row groups,
+  locations 71, outcomes 76 (~50k rows each), one file per entity under
+  the strict `run_id=<id>.parquet` contract. Total silver_full_catalog
+  footprint **1.5 GB** (snappy) against 9.7 GB of bronze JSON.
