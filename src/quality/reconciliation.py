@@ -1,7 +1,9 @@
 """Cross-layer reconciliation: bronze manifests vs silver Parquet vs warehouse.
 
-Every complete (success) run must carry the same trial count through each
-layer. Failures are reported, never silently corrected.
+Every complete (success) run must carry its trial count through each layer.
+Bronze→silver allows only the drop the transform recorded on file — repeated
+or NCT-less records — and treats an unrecorded shortfall as a failure.
+Failures are reported, never silently corrected.
 
 The checks are split by layer dependency: `bronze_silver_checks` needs only
 bronze manifests and silver Parquet (usable before dbt builds the warehouse),
@@ -19,6 +21,7 @@ from loguru import logger
 
 from src.config import ProjectConfig, get_config
 from src.ingest.snapshot_manifest import IngestionManifest, load_manifests
+from src.transform.silver_stats import expected_trial_rows, load_transform_stats
 
 
 @dataclass
@@ -36,7 +39,8 @@ def _silver_trial_stats(cfg: ProjectConfig, run_id: str) -> tuple[int, int] | No
     if not path.exists():
         return None
     row = duckdb.sql(
-        f"select count(*), count(distinct nct_id) from read_parquet('{path.as_posix()}')"
+        "select count(*), count(distinct nct_id) from read_parquet(?)",
+        params=[path.as_posix()],
     ).fetchone()
     assert row is not None
     return int(row[0]), int(row[1])
@@ -82,13 +86,29 @@ def bronze_silver_checks(cfg: ProjectConfig | None = None) -> list[Reconciliatio
             )
             continue
         rows, distinct_ncts = stats
+        expected = expected_trial_rows(
+            load_transform_stats(cfg, manifest.ingestion_run_id), manifest.record_count
+        )
+        note = ""
+        if expected is None:
+            # Without the transform's exclusion counts, the only defensible
+            # expectation is that every bronze record survived: a shortfall
+            # stays a failure rather than being waved through.
+            expected, note = (
+                manifest.record_count,
+                (
+                    "No transform stats on file, so legitimate dedup cannot be "
+                    "accounted for; rebuild with `make transform --force`."
+                ),
+            )
         checks.append(
             ReconciliationCheck(
                 check="bronze_manifest_vs_silver_rows",
                 run_id=manifest.ingestion_run_id,
-                expected=manifest.record_count,
+                expected=expected,
                 actual=rows,
-                passed=rows == manifest.record_count,
+                passed=rows == expected,
+                note=note,
             )
         )
         checks.append(
