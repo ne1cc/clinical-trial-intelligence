@@ -29,6 +29,11 @@ dev = [
     "requests-mock>=1.12",
     "ruff>=0.5",
 ]
+orchestration = [
+    "dagster>=1.13.21",
+    "dagster-dbt>=0.29.21",
+    "dagster-webserver>=1.13.21",
+]
 
 [build-system]
 requires = ["hatchling"]
