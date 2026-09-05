@@ -28,6 +28,15 @@ def project_root_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
+@pytest.fixture(autouse=True)
+def _clear_config_cache():
+    from src.config import get_config
+
+    get_config.cache_clear()
+    yield
+    get_config.cache_clear()
+
+
 def materialize_with_checks(*, assets, asset_checks, run_config=None, raise_on_error=False):
     from dagster import Definitions
 

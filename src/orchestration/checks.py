@@ -4,6 +4,7 @@ from dagster import AssetCheckResult, MetadataValue, asset_check
 
 from src.config import load_config
 from src.ingest.snapshot_manifest import load_manifests
+from src.quality.reconciliation import run_reconciliation
 
 
 @asset_check(asset="ctg_raw_pages", name="manifest_integrity", blocking=True)
@@ -38,6 +39,30 @@ def manifest_integrity() -> AssetCheckResult:
                     "page_count_positive": latest.page_count > 0,
                     "counts_agree": counts_agree,
                 }
+            ),
+        },
+    )
+
+
+@asset_check(asset="silver_entities", name="cross_layer_reconciliation", blocking=True)
+def cross_layer_reconciliation() -> AssetCheckResult:
+    checks = run_reconciliation()
+    failed = [c for c in checks if not c.passed]
+    return AssetCheckResult(
+        passed=not failed,
+        metadata={
+            "total_checks": len(checks),
+            "failed_checks": MetadataValue.json(
+                [
+                    {
+                        "check": c.check,
+                        "run_id": c.run_id,
+                        "expected": str(c.expected),
+                        "actual": str(c.actual),
+                        "note": c.note,
+                    }
+                    for c in failed
+                ]
             ),
         },
     )
