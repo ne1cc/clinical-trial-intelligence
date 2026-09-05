@@ -2,6 +2,7 @@
 select
     {{ generate_surrogate_key(['c.nct_id']) }} as trial_key,
     c.nct_id,
+    t.indication_profile_id,
     'https://clinicaltrials.gov/study/' || c.nct_id as registry_url,
     t.brief_title as current_brief_title,
     c.overall_status as current_overall_status,

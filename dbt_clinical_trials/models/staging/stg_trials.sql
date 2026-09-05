@@ -2,6 +2,7 @@
 -- dates may be partial); raw strings preserved alongside parsed values.
 select
     ingestion_run_id,
+    indication_profile_id,
     cast(try_cast(snapshot_timestamp_utc as timestamptz) as timestamp) as snapshot_timestamp_utc,
     cast(try_cast(snapshot_timestamp_utc as timestamptz) as date) as snapshot_date,
     nct_id,
