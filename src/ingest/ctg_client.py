@@ -2,11 +2,15 @@
 
 All query parameters come from config; list-valued filters (e.g.
 filter.overallStatus) are joined with '|' per the v2 API syntax.
+
+Uses `requests` rather than `httpx`: ClinicalTrials.gov's edge bot-protection
+fingerprints httpx's TLS/HTTP handshake and rejects it with 403 even for
+otherwise-identical requests, while requests (built on urllib3) is unaffected.
 """
 
 from typing import Any
 
-import httpx
+import requests
 
 from src.config import ApiConfig
 from src.ingest.retry_policy import RetryableHTTPStatusError, build_retryer
@@ -15,14 +19,12 @@ USER_AGENT = "clinical-trial-intelligence/0.1 (local-first analytics portfolio)"
 
 
 class CTGClient:
-    def __init__(self, api_config: ApiConfig, client: httpx.Client | None = None):
+    def __init__(self, api_config: ApiConfig, client: requests.Session | None = None):
         self.api = api_config
         self._url = api_config.studies_url
         self._http = api_config.http
-        self._client = client or httpx.Client(
-            timeout=api_config.http.timeout_seconds,
-            headers={"Accept": "application/json", "User-Agent": USER_AGENT},
-        )
+        self._client = client or requests.Session()
+        self._client.headers.update({"Accept": "application/json", "User-Agent": USER_AGENT})
         self._retryer = build_retryer(api_config.http)
 
     def build_params(self, condition: str | None = None) -> dict[str, str]:
@@ -45,8 +47,10 @@ class CTGClient:
         if page_token:
             query["pageToken"] = page_token
 
-        def _request() -> httpx.Response:
-            response = self._client.get(self._url, params=query)
+        def _request() -> requests.Response:
+            response = self._client.get(
+                self._url, params=query, timeout=self._http.timeout_seconds
+            )
             if response.status_code in self._http.retry_on_status:
                 raise RetryableHTTPStatusError(response.status_code, self._url)
             response.raise_for_status()

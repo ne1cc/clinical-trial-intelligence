@@ -1,6 +1,5 @@
-import httpx
 import pytest
-import respx
+import requests
 
 from src.config import ApiConfig, HttpConfig
 from src.ingest.ctg_client import CTGClient
@@ -47,42 +46,39 @@ def test_build_params_condition_override():
     assert params["query.cond"] == "Lewy Body Dementia"
 
 
-@respx.mock
-def test_fetch_page_returns_payload_and_raw_text():
-    respx.get(STUDIES).mock(return_value=httpx.Response(200, json={"studies": []}))
+def test_fetch_page_returns_payload_and_raw_text(requests_mock):
+    requests_mock.get(STUDIES, json={"studies": []})
     with CTGClient(make_api()) as client:
         payload, raw_text = client.fetch_page(client.build_params())
     assert payload == {"studies": []}
     assert '"studies"' in raw_text
 
 
-@respx.mock
-def test_retries_on_503_then_succeeds():
-    route = respx.get(STUDIES).mock(
-        side_effect=[
-            httpx.Response(503),
-            httpx.Response(200, json={"studies": [{"protocolSection": {}}]}),
-        ]
+def test_retries_on_503_then_succeeds(requests_mock):
+    requests_mock.get(
+        STUDIES,
+        [
+            {"status_code": 503},
+            {"json": {"studies": [{"protocolSection": {}}]}, "status_code": 200},
+        ],
     )
     with CTGClient(make_api()) as client:
         payload, _ = client.fetch_page(client.build_params())
-    assert route.call_count == 2
+    assert requests_mock.call_count == 2
     assert len(payload["studies"]) == 1
 
 
-@respx.mock
-def test_no_retry_on_client_error_400():
-    route = respx.get(STUDIES).mock(return_value=httpx.Response(400))
+def test_no_retry_on_client_error_400(requests_mock):
+    requests_mock.get(STUDIES, status_code=400)
     with CTGClient(make_api()) as client:
-        with pytest.raises(httpx.HTTPStatusError):
+        with pytest.raises(requests.HTTPError):
             client.fetch_page(client.build_params())
-    assert route.call_count == 1
+    assert requests_mock.call_count == 1
 
 
-@respx.mock
-def test_retries_exhausted_raises_retryable_error():
-    route = respx.get(STUDIES).mock(return_value=httpx.Response(503))
+def test_retries_exhausted_raises_retryable_error(requests_mock):
+    requests_mock.get(STUDIES, status_code=503)
     with CTGClient(make_api()) as client:
         with pytest.raises(RetryableHTTPStatusError):
             client.fetch_page(client.build_params())
-    assert route.call_count == 3
+    assert requests_mock.call_count == 3

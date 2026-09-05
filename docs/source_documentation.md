@@ -33,7 +33,7 @@ the run **partial**, and partial runs are excluded from reuse and from all
 downstream layers by default.
 
 ## Retry / politeness
-`httpx` + `tenacity`: exponential backoff (1s → 60s), max 5 attempts,
+`requests` + `tenacity`: exponential backoff (1s → 60s), max 5 attempts,
 retried statuses 429/500/502/503/504 (all in config, overridable via env).
 
 ## The history caveat (core design driver)

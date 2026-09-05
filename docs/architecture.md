@@ -15,7 +15,7 @@ flowchart TB
 
     subgraph ING["Ingestion (src/ingest)"]
         CLI["src.cli ingest"]
-        CLIENT["ctg_client.py<br/>httpx + tenacity retries + timeouts"]
+        CLIENT["ctg_client.py<br/>requests + tenacity retries + timeouts"]
         PAGES["pagination.py<br/>follow nextPageToken"]
         VAL["validate_api_payload.py<br/>pydantic envelope checks"]
         QUAR["quarantine<br/>malformed records + reason codes"]
@@ -114,7 +114,7 @@ collection. This is documented, not hidden.
 | Concern | Choice | Rationale |
 |---|---|---|
 | Dependency mgmt | uv | Fast, lockfile-based, reproducible |
-| HTTP | httpx + tenacity | Timeouts, typed exceptions, exponential backoff |
+| HTTP | requests + tenacity | Timeouts, typed exceptions, exponential backoff |
 | Validation | pydantic v2 | Envelope/schema validation with clear errors |
 | Storage | Parquet + DuckDB | Local-first, columnar, zero-ops warehouse |
 | Modeling | dbt-duckdb | Tested, documented, grain-safe SQL layers |

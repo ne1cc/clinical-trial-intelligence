@@ -158,7 +158,7 @@ flowchart TB
         MEMO["Executive memo template"]
     end
 
-    CTG -->|"httpx + retry/backoff<br/>run_id per snapshot"| RAW
+    CTG -->|"requests + retry/backoff<br/>run_id per snapshot"| RAW
     CTG --> MAN
     RAW -->|"flatten + normalize<br/>(pandas/pyarrow)"| PQ
     RAW -.->|invalid records| QUAR
@@ -292,7 +292,7 @@ One ingestion run = one dated snapshot of the full query result, stored verbatim
 sequenceDiagram
     participant U as make ingest
     participant O as extract_studies
-    participant C as ctg_client (httpx)
+    participant C as ctg_client (requests)
     participant A as ClinicalTrials.gov API v2
     participant D as data/bronze/
 

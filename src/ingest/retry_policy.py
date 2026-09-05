@@ -1,7 +1,7 @@
 """Retry policy for ClinicalTrials.gov API calls: exponential backoff on
 retryable HTTP statuses, timeouts, and transport errors."""
 
-import httpx
+import requests
 from loguru import logger
 from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
@@ -15,7 +15,11 @@ class RetryableHTTPStatusError(Exception):
         super().__init__(f"Retryable HTTP status {status_code} from {url}")
 
 
-RETRYABLE_EXCEPTIONS = (RetryableHTTPStatusError, httpx.TimeoutException, httpx.NetworkError)
+RETRYABLE_EXCEPTIONS = (
+    RetryableHTTPStatusError,
+    requests.Timeout,
+    requests.ConnectionError,
+)
 
 
 def build_retryer(http_config: HttpConfig) -> Retrying:
