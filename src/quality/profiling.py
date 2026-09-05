@@ -4,7 +4,7 @@ reconciliation of trial rows against the ingestion manifest."""
 import json
 from pathlib import Path
 
-import pandas as pd
+import duckdb
 
 from src.config import ProjectConfig, get_config
 from src.ingest.snapshot_manifest import load_manifests
@@ -15,15 +15,35 @@ from src.utils.paths import ensure_dir
 
 
 def profile_entity(path: Path) -> dict:
-    frame = pd.read_parquet(path)
-    null_rates = {} if frame.empty else (frame.isna().mean().round(4)).to_dict()
-    profile = {
-        "row_count": int(len(frame)),
-        "column_count": int(frame.shape[1]),
-        "null_rates": {k: float(v) for k, v in null_rates.items()},
+    # Single streaming aggregate over the parquet file: profiling must not
+    # materialize full-catalog entity tables (hundreds of millions of rows
+    # for locations/outcomes) in memory.
+    table = f"read_parquet('{path.as_posix()}')"
+    con = duckdb.connect(":memory:")
+    try:
+        columns = [
+            row[0] for row in con.execute(f"describe select * from {table}").fetchall()
+        ]
+        aggregates = ["count(*)"] + [f'count("{col}")' for col in columns]
+        if "nct_id" in columns:
+            aggregates.append('count(distinct "nct_id")')
+        stats = con.execute(f"select {', '.join(aggregates)} from {table}").fetchone()
+    finally:
+        con.close()
+
+    row_count = int(stats[0])
+    profile: dict = {
+        "row_count": row_count,
+        "column_count": len(columns),
+        "null_rates": {},
     }
-    if "nct_id" in frame.columns:
-        profile["distinct_nct_ids"] = int(frame["nct_id"].nunique())
+    if row_count:
+        profile["null_rates"] = {
+            col: round(1.0 - non_null / row_count, 4)
+            for col, non_null in zip(columns, stats[1 : 1 + len(columns)], strict=True)
+        }
+    if "nct_id" in columns:
+        profile["distinct_nct_ids"] = int(stats[-1])
     return profile
 
 

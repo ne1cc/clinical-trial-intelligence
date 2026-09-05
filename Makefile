@@ -10,7 +10,7 @@ CONDITION   ?= Alzheimer Disease
 .DEFAULT_GOAL := help
 
 .PHONY: help setup env ingest full-refresh ingest-full-catalog full-catalog-full-refresh \
-        transform dbt-deps dbt-seed dbt-run dbt-test \
+        transform transform-full-catalog dbt-deps dbt-seed dbt-run dbt-test \
         dbt-docs quality-report dashboard test lint format clean pipeline
 
 help: ## Show available commands
@@ -38,6 +38,9 @@ full-catalog-full-refresh: ## Opt-in: force a full re-pull of the full-catalog p
 
 transform: ## Flatten bronze JSON into silver Parquet entities (Phase 3)
 	$(PYTHON) -m src.cli transform
+
+transform-full-catalog: ## Opt-in: transform the full-catalog bronze tree into full-catalog silver
+	$(PYTHON) -m src.cli transform --profile full-catalog
 
 dbt-deps: ## Install dbt packages (Phase 4)
 	$(DBT) deps $(DBT_FLAGS)
