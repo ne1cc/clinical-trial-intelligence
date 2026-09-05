@@ -145,6 +145,21 @@ normalized as (
 scored as (
     select
         n.*,
+        w.w_density as weight_recruiting_trial_count,
+        w.w_growth as weight_recent_recruiting_growth,
+        w.w_concentration as weight_sponsor_concentration,
+        w.w_overlap as weight_site_overlap,
+        w.w_confidence as weight_data_confidence_adjustment,
+        round(w.w_density * n.normalized_recruiting_trial_count, 4)
+            as weighted_recruiting_trial_count,
+        round(w.w_growth * n.normalized_recent_recruiting_growth, 4)
+            as weighted_recent_recruiting_growth,
+        round(w.w_concentration * n.normalized_sponsor_concentration, 4)
+            as weighted_sponsor_concentration,
+        round(w.w_overlap * n.normalized_site_overlap, 4)
+            as weighted_site_overlap,
+        round(w.w_confidence * n.normalized_data_confidence_adjustment, 4)
+            as weighted_data_confidence_adjustment,
         round(
             w.w_density * n.normalized_recruiting_trial_count
             + w.w_growth * n.normalized_recent_recruiting_growth
@@ -197,6 +212,16 @@ select
     normalized_sponsor_concentration,
     normalized_site_overlap,
     normalized_data_confidence_adjustment,
+    weight_recruiting_trial_count,
+    weight_recent_recruiting_growth,
+    weight_sponsor_concentration,
+    weight_site_overlap,
+    weight_data_confidence_adjustment,
+    weighted_recruiting_trial_count,
+    weighted_recent_recruiting_growth,
+    weighted_sponsor_concentration,
+    weighted_site_overlap,
+    weighted_data_confidence_adjustment,
     -- Deterministic explanation assembled from fixed component phrases.
     concat_ws(
         '; ',
