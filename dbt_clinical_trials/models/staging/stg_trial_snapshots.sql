@@ -13,5 +13,7 @@ select
     cast(record_count as integer) as record_count,
     try_cast(total_count_reported as integer) as total_count_reported,
     cast(quarantined_record_count as integer) as quarantined_record_count,
-    error
+    -- All-null summaries (fixture and first successes) read back as INTEGER;
+    -- normalize to VARCHAR so the mart contract matches the manifest schema.
+    cast(error as varchar) as error
 from {{ source('bronze', 'ingestion_manifests') }}

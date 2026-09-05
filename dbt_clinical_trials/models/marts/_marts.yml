@@ -494,7 +494,7 @@ models:
       - name: low_confidence_condition_share
         data_type: DOUBLE
       - name: error
-        data_type: INTEGER
+        data_type: VARCHAR
 
   - name: mart_feasibility_priority_queue
     description: >
