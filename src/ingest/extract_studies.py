@@ -8,7 +8,7 @@ a unique ingestion_run_id, and downstream models compare snapshots.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.config import ProjectConfig, get_config
 from src.ingest.ctg_client import CTGClient
@@ -52,13 +52,17 @@ def run_ingestion(
     log = setup_logging()
 
     # Unwrap IndicationProfile if that's what we received.
-    # TYPE_CHECKING guard means we check duck-typing attribute to avoid
-    # circular imports at runtime.
-    if hasattr(config, "profile_id"):
+    from src.profiles import IndicationProfile
+
+    if isinstance(config, IndicationProfile):
         profile = config.profile_id
-        cfg: ProjectConfig = config.config
+        cfg = config.config
     elif isinstance(config, ProjectConfig):
         cfg = config
+    elif config is not None and hasattr(config, "profile_id"):
+        config_any: Any = config
+        profile = str(config_any.profile_id)
+        cfg = config_any.config if hasattr(config, "config") else get_config()
     else:
         cfg = get_config()
 
