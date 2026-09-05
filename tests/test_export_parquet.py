@@ -144,3 +144,78 @@ def test_writer_discard_removes_partial_files(tmp_path: Path):
     entity_dir = tmp_path / "silver_trials"
     assert not (entity_dir / "run_id=r1.parquet").exists()
     assert list(entity_dir.glob("*.tmp")) == []
+
+
+FULL_STUDY = {
+    "hasResults": True,
+    "protocolSection": {
+        "identificationModule": {"nctId": "NCT00000001", "briefTitle": "T", "officialTitle": "T"},
+        "statusModule": {
+            "overallStatus": "RECRUITING",
+            "lastKnownStatus": "RECRUITING",
+            "statusVerifiedDate": "2026-01-01",
+            "expandedAccessInfo": {"hasExpandedAccess": False},
+            "startDateStruct": {"date": "2025-01-01"},
+            "primaryCompletionDateStruct": {"date": "2026-01-01"},
+            "completionDateStruct": {"date": "2026-06-01"},
+            "studyFirstPostDateStruct": {"date": "2024-01-01"},
+            "resultsFirstPostDateStruct": {"date": "2026-07-01"},
+            "lastUpdatePostDateStruct": {"date": "2026-08-01"},
+        },
+        "designModule": {
+            "phases": ["PHASE3"],
+            "studyType": "INTERVENTIONAL",
+            "enrollmentInfo": {"count": 100, "type": "ACTUAL"},
+            "designInfo": {"allocation": "RANDOMIZED", "primaryPurpose": "TREATMENT"},
+        },
+        "sponsorCollaboratorsModule": {
+            "leadSponsor": {"name": "Lead", "class": "INDUSTRY"},
+            "collaborators": [{"name": "Collab", "class": "OTHER"}],
+        },
+        "eligibilityModule": {
+            "healthyVolunteers": True,
+            "minimumAge": "18 Years",
+            "maximumAge": "65 Years",
+            "sex": "ALL",
+            "eligibilityCriteria": "Inclusion: ...",
+        },
+        "conditionsModule": {"conditions": ["Alzheimer Disease"]},
+        "armsInterventionsModule": {
+            "interventions": [{"name": "Drug X", "type": "DRUG", "description": "d"}]
+        },
+        "contactsLocationsModule": {
+            "locations": [
+                {
+                    "facility": "Clinic",
+                    "city": "Boston",
+                    "state": "Massachusetts",
+                    "zip": "02100",
+                    "country": "United States",
+                    "status": "RECRUITING",
+                    "geoPoint": {"lat": 42.36, "lon": -71.06},
+                }
+            ]
+        },
+        "outcomesModule": {
+            "primaryOutcomes": [{"measure": "m", "description": "d", "timeFrame": "t"}],
+            "secondaryOutcomes": [{"measure": "m2", "description": "d", "timeFrame": "t"}],
+            "otherOutcomes": [{"measure": "m3", "description": "d", "timeFrame": "t"}],
+        },
+    },
+}
+
+
+def test_flatten_emits_exactly_entity_columns():
+    # Guard the flatten -> silver contract: every row a study produces must
+    # match ENTITY_COLUMNS exactly. The old pandas export silently wrote
+    # extra keys; the fixed-schema writer drops them, so a flatten change
+    # without an ENTITY_COLUMNS update would silently lose columns.
+    from src.transform.flatten_studies import flatten_study
+    from src.transform.normalize_conditions import get_taxonomy
+    from src.transform.normalize_locations import get_geography_rules
+
+    rows_by_entity = flatten_study(FULL_STUDY, "r1", "ts", get_taxonomy(), get_geography_rules())
+    for entity, rows in rows_by_entity.items():
+        assert rows, f"fixture must produce at least one {entity} row"
+        for row in rows:
+            assert set(row.keys()) == set(ENTITY_COLUMNS[entity]), entity

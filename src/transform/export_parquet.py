@@ -31,6 +31,12 @@ ENTITY_COLUMNS: dict[str, list[str]] = {
         "phase_normalized",
         "enrollment_count",
         "enrollment_type",
+        # flatten_study emits these trial columns beyond the original
+        # ENTITY_COLUMNS list; the old pandas export preserved them and
+        # dbt staging (stg_trials) selects them, so they are part of the
+        # on-disk contract.
+        "allocation",
+        "primary_purpose",
         "lead_sponsor_name",
         "responsible_party_type",
         "healthy_volunteers",
