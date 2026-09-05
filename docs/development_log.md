@@ -769,5 +769,29 @@ fresh worktree):
 - `uv run pytest`: **98 passed, 0 failed, 0 skipped** (dashboard smoke
   tests now run for real against the rebuilt warehouse).
 
-Full-catalog streaming transform results: appended below when the run
-completes.
+Full-catalog streaming transform (run `20260905T184736Z_a62964b0`,
+601,694 studies, executed via `/usr/bin/time -l`):
+
+- **Peak RSS 1,058,586,624 bytes ≈ 1.06 GB** (target < 1.5 GB; the old
+  collect-then-materialize approach would have needed tens of GB for
+  this run). Wall time **~7.5 minutes** (~85k studies/min); progress
+  lines at every 100k studies behaved as designed.
+- Rows written: silver_trials **601,694**; conditions 1,081,165;
+  interventions 1,017,756; sponsors 959,315; locations 3,519,911;
+  outcomes 3,755,941. No dedup/skip/reconciliation warnings fired.
+- **Reconciliation: `bronze_manifest_vs_silver_rows` 601,694 == 601,694
+  PASS; `silver_nct_ids_unique` 601,694 == 601,694 PASS** — rows equal
+  distinct NCT IDs equal the manifest count, zero unexpected loss. The
+  `warehouse_exists` check reports `missing` as expected: the
+  full-catalog dbt warehouse is explicitly out of scope this phase
+  (gold/dbt remain default-profile only).
+- Profile JSON (`data/silver_full_catalog/_profiles/profile_…json`)
+  produced by the DuckDB streaming profiler across the 3.76M-row
+  outcomes file without materialization: 32 columns on silver_trials
+  (30 original + `allocation` + `primary_purpose`), distinct NCT counts
+  per child entity (conditions 600,670; interventions 540,752;
+  sponsors 601,694; locations 541,210; outcomes 584,078).
+- Row-group streaming confirmed on disk: silver_trials 13 row groups,
+  locations 71, outcomes 76 (~50k rows each), one file per entity under
+  the strict `run_id=<id>.parquet` contract. Total silver_full_catalog
+  footprint **1.5 GB** (snappy) against 9.7 GB of bronze JSON.
