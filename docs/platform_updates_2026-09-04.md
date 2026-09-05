@@ -2,7 +2,7 @@
 
 This document explains, in plain language, what was decided today for the
 platform modernization and why. The full technical design lives in
-[`docs/superpowers/specs/2026-09-04-platform-modernization-design.md`](superpowers/specs/2026-09-04-platform-modernization-design.md).
+`docs/superpowers/specs/2026-09-04-platform-modernization-design.md`.
 
 ---
 

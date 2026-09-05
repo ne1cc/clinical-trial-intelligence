@@ -1,6 +1,7 @@
 # Data (bronze/silver/gold artifacts and local warehouse are never committed)
 data/bronze/api_responses/*
 data/bronze/manifests/*
+data/bronze/*/*
 data/silver/*
 data/gold/*
 data/warehouse/*.duckdb
@@ -48,3 +49,7 @@ data/bronze/_schema_drift_*.json
 
 # Linked worktrees
 .worktrees/
+
+# Superpowers / agent planning artifacts
+docs/superpowers/
+.superpowers/
