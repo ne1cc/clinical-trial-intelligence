@@ -12,6 +12,7 @@ from src.quality.profiling import profile_run
 from src.transform import build_silver_entities
 from src.transform.build_silver_entities import _already_transformed, build_silver_for_run
 from src.transform.export_parquet import ENTITY_COLUMNS
+from src.transform.silver_stats import stats_path
 from src.utils.dates import utc_now
 
 
@@ -152,8 +153,14 @@ def test_profile_run_treats_dedup_shortfall_as_expected(tmp_path: Path, monkeypa
     assert recon["manifest_record_count"] == 3
     assert recon["silver_trials_row_count"] == 2
     assert recon["excluded_records"] == 1
-    assert recon["no_unexpected_loss"] is True
+    assert recon["expected_silver_rows"] == 2
+    assert recon["rows_match_expectation"] is True
     assert recon["nct_ids_unique"] is True
+
+    stats = json.loads(stats_path(cfg, run_id).read_text(encoding="utf-8"))
+    assert stats["duplicate_nct_ids_dropped"] == 1
+    assert stats["records_without_nct_id"] == 0
+    assert stats["row_counts"]["silver_trials"] == 2
 
 
 def pq_num_row_groups(path: Path) -> int:
