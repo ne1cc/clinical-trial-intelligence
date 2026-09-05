@@ -5,6 +5,7 @@ tests/fixtures/bronze_snapshot; every test in this module asserts against it.
 No network, no real API, everything under tmp_path_factory.
 """
 
+import json
 from pathlib import Path
 
 import duckdb
@@ -120,3 +121,19 @@ def test_mart_data_reliability_reconciles(fixture_project_root: Path) -> None:
         "manifest_reconciled_flag, unique_nct_flag "
         f"from main_marts.mart_data_reliability where ingestion_run_id = '{FIXTURE_RUN_ID}'",
     ) == [("success", 10, 10, True, True)]
+
+
+def test_marts_contracts_enforced(fixture_project_root: Path) -> None:
+    manifest = json.loads(
+        (fixture_project_root / "dbt_target/manifest.json").read_text(encoding="utf-8")
+    )
+    marts = {
+        node["name"]: node
+        for node in manifest["nodes"].values()
+        if node["resource_type"] == "model"
+        and node["original_file_path"].startswith("models/marts/")
+    }
+    assert len(marts) == 15
+    for name, node in marts.items():
+        assert node["contract"]["enforced"] is True, name
+        assert {c["name"] for c in node["columns"].values()}, name
