@@ -1,0 +1,83 @@
+# ============================================================
+# Indication Profile: Alzheimer's Disease & Related Dementias (ADRD)
+# Default indication profile for the clinical-trial-intelligence platform.
+# ============================================================
+
+indication_id: "adrd"
+display_name: "Alzheimer's Disease & Related Dementias (ADRD)"
+description: "Interventional trials targeting Alzheimer's disease, MCI, and related dementias."
+
+query:
+  condition: "Alzheimer Disease"
+  advanced_filter: "AREA[StudyType]INTERVENTIONAL"
+
+taxonomy:
+  default:
+    condition_group: non_dementia_other
+    relevance_flag: false
+
+  groups:
+    - condition_group: alzheimers_disease
+      relevance_flag: true
+      exact:
+        - alzheimer disease
+        - alzheimers disease
+        - alzheimer dementia
+        - alzheimers dementia
+      substrings:
+        - alzheimer
+
+    - condition_group: mild_cognitive_impairment
+      relevance_flag: true
+      exact:
+        - mci
+      substrings:
+        - mild cognitive impairment
+        - amnestic mild cognitive
+
+    - condition_group: lewy_body_dementia
+      relevance_flag: true
+      exact: []
+      substrings:
+        - lewy
+
+    - condition_group: frontotemporal_dementia
+      relevance_flag: true
+      exact: []
+      substrings:
+        - frontotemporal
+        - primary progressive aphasia
+        - pick disease
+        - picks disease
+
+    - condition_group: vascular_dementia
+      relevance_flag: true
+      exact: []
+      substrings:
+        - vascular dementia
+        - vascular cognitive
+
+    - condition_group: parkinsons_disease_dementia
+      relevance_flag: true
+      exact:
+        - pdd
+      substrings:
+        - parkinson disease dementia
+        - parkinsons disease dementia
+
+    - condition_group: dementia_unspecified
+      relevance_flag: true
+      exact: []
+      substrings:
+        - dementia
+
+    - condition_group: cognitive_impairment_other
+      relevance_flag: false
+      exact: []
+      substrings:
+        - cognitive impairment
+        - cognitive decline
+        - cognitive dysfunction
+        - memory disorder
+        - memory impairment
+        - memory loss

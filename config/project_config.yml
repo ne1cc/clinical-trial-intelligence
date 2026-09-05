@@ -1,13 +1,14 @@
 # ============================================================
 # Clinical Trial Access & Recruitment Competition Intelligence
-# Central runtime configuration. All API query parameters live
-# here — never hard-coded in Python.
+# Central runtime configuration. Shared API parameters live
+# here — never hard-coded in Python. Per-indication query.cond /
+# filter.advanced come from indication profiles (config/indications/*.yml).
 #
 # Parameter syntax verified against the live ClinicalTrials.gov
 # API v2 (GET /api/v2/studies) on 2026-07-24:
-#   - query.cond          : condition query ("Alzheimer Disease")
+#   - query.cond          : condition query (from active indication profile)
 #   - filter.overallStatus: pipe-separated status enums
-#   - filter.advanced     : Essie expression, e.g. AREA[StudyType]INTERVENTIONAL
+#   - filter.advanced     : Essie expression (from active indication profile)
 #   - pageSize / pageToken: pagination (follow nextPageToken until absent)
 #   - countTotal          : include totalCount on the first page
 # OpenAPI spec: https://clinicaltrials.gov/api/oas/v2
@@ -33,15 +34,18 @@ api:
   format: json
   page_size: 100            # API max is 1000; 100 keeps bronze pages reviewable
   count_total: true
-  # Query parameters sent verbatim (values below are joined/encoded by the client)
+  # Query parameters sent verbatim (values below are joined/encoded by the client).
+  # query.cond and filter.advanced are supplied by the active indication profile.
   query_params:
-    query.cond: "Alzheimer Disease"
-    filter.advanced: "AREA[StudyType]INTERVENTIONAL"
     filter.overallStatus:      # joined with "|" at request time
       - RECRUITING
       - ACTIVE_NOT_RECRUITING
       - NOT_YET_RECRUITING
       - COMPLETED
+      - TERMINATED
+      - WITHDRAWN
+      - SUSPENDED
+      - ENROLLING_BY_INVITATION
   http:
     timeout_seconds: 30
     max_retries: 5
@@ -50,6 +54,7 @@ api:
     retry_on_status: [429, 500, 502, 503, 504]
 
 scope:
+  default_indication_profile: "adrd"
   therapeutic_area: "Alzheimer's disease and related dementias"
   geography: "United States"          # analysis scope; all raw records preserved
   study_type: INTERVENTIONAL
@@ -58,6 +63,10 @@ scope:
     - ACTIVE_NOT_RECRUITING
     - NOT_YET_RECRUITING
     - COMPLETED
+    - TERMINATED
+    - WITHDRAWN
+    - SUSPENDED
+    - ENROLLING_BY_INVITATION
   phases:                             # normalized in silver; source may omit phase
     - EARLY_PHASE1
     - PHASE1

@@ -35,8 +35,12 @@
     observed; the disclaimer is embedded in every output object.
 
 ## Operational limitations
-11. Single-condition MVP (Alzheimer's + related dementias via taxonomy);
-    other areas require config changes and review of the taxonomy.
+11. Multi-condition via pluggable indication profiles (`config/indications/*.yml`,
+    e.g. `adrd`, `oncology_nsclc`), each bundling its own CT.gov query and
+    condition taxonomy; ADRD remains the default. Adding a therapeutic area is a
+    new profile YAML plus taxonomy review, not a code change.
+    A trial matching more than one profile's query is ingested under each; marts
+    attribute it to the profile of its most recent ingestion run.
 12. Weekly cadence is recommended, not enforced; gaps widen transition
     windows.
 13. Local-first DuckDB warehouse; multi-user concurrency and cloud

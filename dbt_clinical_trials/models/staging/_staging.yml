@@ -28,6 +28,11 @@ models:
                  ENROLLING_BY_INVITATION, SUSPENDED, TERMINATED, WITHDRAWN, UNKNOWN]
               config:
                 severity: warn
+      - name: why_stopped
+        description: Free-text rationale provided when a trial is terminated, suspended, or withdrawn.
+      - name: indication_profile
+        description: Which config-driven indication profile's query/taxonomy produced this run (e.g. adrd, oncology_nsclc).
+        tests: [not_null]
 
   - name: stg_trial_conditions
     columns:

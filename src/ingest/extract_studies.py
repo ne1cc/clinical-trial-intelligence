@@ -6,7 +6,7 @@ through repeated snapshot runs — every run saves unmodified page JSON under
 a unique ingestion_run_id, and downstream models compare snapshots.
 """
 
-from src.config import ProjectConfig, get_config
+from src.config import ProjectConfig, get_config, load_indication_profile
 from src.ingest.ctg_client import CTGClient
 from src.ingest.pagination import iter_pages
 from src.ingest.snapshot_manifest import (
@@ -45,8 +45,33 @@ def run_ingestion(
     cfg = config or get_config()
     manifests_dir = cfg.paths.bronze_manifests
 
+    profile_obj = None
+    if profile == "full-catalog":
+        pass  # all-conditions snapshot; no indication scoping applies
+    elif profile and profile != "default":
+        profile_obj = load_indication_profile(profile)
+        if condition is None:
+            condition = profile_obj.query.condition
+    elif condition is None:
+        # Resolve via the configured default indication profile
+        default_prof = cfg.scope.get("default_indication_profile", "adrd")
+        try:
+            profile_obj = load_indication_profile(default_prof)
+            condition = profile_obj.query.condition
+        except Exception:
+            pass
+
+    if condition is None and profile != "full-catalog":
+        raise ValueError(
+            "No condition query resolved: pass --condition or --profile, or ensure "
+            "the default indication profile exists under config/indications/."
+        )
+
     with CTGClient(cfg.api) as client:
         params = client.build_params(condition=condition)
+        if profile_obj and profile_obj.query.advanced_filter:
+            params["filter.advanced"] = profile_obj.query.advanced_filter
+
         query_hash = sha256_json({"endpoint": cfg.api.studies_url, "params": params})
 
         if not full_refresh:
@@ -71,6 +96,7 @@ def run_ingestion(
             query_hash=query_hash,
             endpoint=cfg.api.studies_url,
             condition=params.get("query.cond"),
+            indication_profile=profile_obj.indication_id if profile_obj else None,
             params=params,
             mode="full_refresh" if full_refresh else "incremental",
             profile=profile,

@@ -66,6 +66,7 @@ def flatten_study(
     snapshot_timestamp_utc: str,
     taxonomy: ConditionTaxonomy,
     geography: GeographyRules,
+    indication_profile: str = "adrd",
 ) -> dict[str, list[dict[str, Any]]]:
     """One study → rows for each silver entity."""
     protocol = study.get("protocolSection", {})
@@ -92,6 +93,7 @@ def flatten_study(
         "official_title": identification.get("officialTitle"),
         "study_type": design.get("studyType"),
         "overall_status": status.get("overallStatus"),
+        "why_stopped": dig(status, "whyStopped"),
         "last_known_status": status.get("lastKnownStatus"),
         "status_verified_date": status.get("statusVerifiedDate"),
         "expanded_access_info": dig(status, "expandedAccessInfo", "hasExpandedAccess"),
@@ -116,6 +118,7 @@ def flatten_study(
         "eligibility_criteria_text": eligibility.get("eligibilityCriteria"),
         "has_results_flag": bool(study.get("hasResults", False)),
         "source_json_hash": source_json_hash,
+        "indication_profile": indication_profile,
     }
     trial["record_quality_flag"] = trial_quality_flags(trial)
 

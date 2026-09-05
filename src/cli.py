@@ -19,9 +19,19 @@ def build_parser() -> argparse.ArgumentParser:
         "ingest", help="Snapshot studies from ClinicalTrials.gov API v2 into bronze."
     )
     ingest.add_argument(
+        "--profile",
+        "--module",
+        dest="profile",
+        default="default",
+        help="Ingestion profile: 'full-catalog' snapshots all conditions worldwide into a "
+        "separate bronze tree (config/full_catalog_config.yml); otherwise an indication "
+        "profile (e.g. 'adrd', 'oncology_nsclc') whose query.cond / filter.advanced "
+        "scope the request. Defaults to the configured default indication profile.",
+    )
+    ingest.add_argument(
         "--condition",
         default=None,
-        help='Condition query (default: query.cond from config, e.g. "Alzheimer Disease").',
+        help='Condition query (default: query.cond from profile/config, e.g. "Alzheimer Disease").',
     )
     ingest.add_argument(
         "--full-refresh",
@@ -34,17 +44,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional page cap for smoke tests (partial runs stay marked incomplete-by-cap).",
     )
-    ingest.add_argument(
-        "--profile",
-        choices=["default", "full-catalog"],
-        default="default",
-        help="Ingestion scope profile. 'full-catalog' fetches all conditions worldwide "
-        "into a separate bronze tree (config/full_catalog_config.yml); it is "
-        "additive and does not affect the default ADRD/US pipeline.",
-    )
-
     transform = subparsers.add_parser(
         "transform", help="Flatten bronze JSON runs into normalized silver Parquet entities."
+    )
+    transform.add_argument(
+        "--profile",
+        "--module",
+        dest="profile",
+        default="default",
+        help="Indication profile for taxonomy mapping (e.g. 'adrd', 'oncology_nsclc'); "
+        "'default' uses each run's recorded profile. 'full-catalog' transforms the "
+        "full-registry bronze tree (data/bronze_full_catalog).",
     )
     transform.add_argument(
         "--run-id",
@@ -55,14 +65,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--force",
         action="store_true",
         help="Rebuild silver outputs even if they already exist.",
-    )
-    transform.add_argument(
-        "--profile",
-        choices=["default", "full-catalog"],
-        default="default",
-        help="Scope profile to transform. 'full-catalog' reads data/bronze_full_catalog "
-        "and writes data/silver_full_catalog; it is additive and does not affect the "
-        "default ADRD/US pipeline.",
     )
 
     quality = subparsers.add_parser(
@@ -93,9 +95,9 @@ def main(argv: list[str] | None = None) -> int:
             )
             manifest = run_ingestion(
                 condition=args.condition,
+                profile=args.profile,
                 full_refresh=args.full_refresh,
                 max_pages=args.max_pages,
-                profile=args.profile,
                 config=config,
             )
         except Exception as exc:
@@ -114,7 +116,12 @@ def main(argv: list[str] | None = None) -> int:
                 if args.profile == "full-catalog"
                 else None
             )
-            processed = run_transform(run_id=args.run_id, force=args.force, config=config)
+            processed = run_transform(
+                run_id=args.run_id,
+                force=args.force,
+                profile=args.profile,
+                config=config,
+            )
             for run_id in processed:
                 profile_run(run_id, config=config)
         except Exception as exc:

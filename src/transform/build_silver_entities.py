@@ -34,14 +34,24 @@ def _already_transformed(cfg: ProjectConfig, run_id: str) -> bool:
     )
 
 
-def build_silver_for_run(manifest: IngestionManifest, cfg: ProjectConfig) -> dict[str, int]:
+def build_silver_for_run(
+    manifest: IngestionManifest,
+    cfg: ProjectConfig,
+    profile: str | None = None,
+) -> dict[str, int]:
     log = setup_logging()
     run_id = manifest.ingestion_run_id
     run_dir = cfg.paths.bronze_api_responses / f"run_id={run_id}"
     if not run_dir.exists():
         raise FileNotFoundError(f"Bronze pages missing for run {run_id}: {run_dir}")
 
-    taxonomy = get_taxonomy()
+    # Scope values ("default", "full-catalog") are not taxonomies; fall back to
+    # the profile recorded on the run, then the adrd default.
+    if profile in (None, "default", "full-catalog"):
+        profile_to_use = manifest.indication_profile or "adrd"
+    else:
+        profile_to_use = profile
+    taxonomy = get_taxonomy(profile_to_use)
     geography = get_geography_rules()
     snapshot_ts = manifest.started_at_utc.isoformat()
 
@@ -53,7 +63,9 @@ def build_silver_for_run(manifest: IngestionManifest, cfg: ProjectConfig) -> dic
     writer = SilverRunWriter(run_id, cfg.paths.silver, flush_rows=FLUSH_ROWS)
     try:
         for study in iter_bronze_studies(run_dir):
-            rows = flatten_study(study, run_id, snapshot_ts, taxonomy, geography)
+            rows = flatten_study(
+                study, run_id, snapshot_ts, taxonomy, geography, indication_profile=profile_to_use
+            )
             nct_id = rows["silver_trials"][0]["nct_id"]
             if not nct_id:
                 skipped_no_nct += 1  # already quarantined at ingestion
@@ -100,6 +112,7 @@ def build_silver_for_run(manifest: IngestionManifest, cfg: ProjectConfig) -> dic
 def run_transform(
     run_id: str | None = None,
     force: bool = False,
+    profile: str | None = None,
     config: ProjectConfig | None = None,
 ) -> list[str]:
     """Transform bronze runs into silver. Returns processed run IDs."""
@@ -129,7 +142,7 @@ def run_transform(
                 manifest.ingestion_run_id,
             )
             continue
-        build_silver_for_run(manifest, cfg)
+        build_silver_for_run(manifest, cfg, profile=profile)
         processed.append(manifest.ingestion_run_id)
 
     if not processed:

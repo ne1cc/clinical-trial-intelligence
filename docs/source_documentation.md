@@ -13,14 +13,16 @@
 `GET https://clinicaltrials.gov/api/v2/studies`
 
 ## Parameters (all config-driven, none hard-coded)
-Defined in `config/project_config.yml` and verified against the live API
-on 2026-07-24 (HTTP 200, `totalCount` 2,592 for the MVP query):
+Defined in `config/project_config.yml` plus the active indication profile
+(`config/indications/*.yml`, which supplies `query.cond` and `filter.advanced`)
+and verified against the live API on 2026-07-24 (HTTP 200, `totalCount` 2,592
+for the MVP query):
 
 | Parameter | Value (MVP) | Notes |
 |---|---|---|
-| `query.cond` | `Alzheimer Disease` | condition query |
+| `query.cond` | `Alzheimer Disease` | condition query (from active profile) |
 | `filter.overallStatus` | `RECRUITING\|ACTIVE_NOT_RECRUITING\|NOT_YET_RECRUITING\|COMPLETED` | pipe-joined list |
-| `filter.advanced` | `AREA[StudyType]INTERVENTIONAL` | Essie expression |
+| `filter.advanced` | `AREA[StudyType]INTERVENTIONAL` | Essie expression (from active profile) |
 | `format` | `json` | |
 | `pageSize` | `100` | |
 | `countTotal` | `true` | enables reconciliation vs `totalCount` |

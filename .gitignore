@@ -48,3 +48,7 @@ data/bronze/_schema_drift_*.json
 
 # Linked worktrees
 .worktrees/
+
+# AI tooling
+.claude/
+.gemini/

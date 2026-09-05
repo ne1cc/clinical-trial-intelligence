@@ -201,6 +201,19 @@ def test_flatten_study_produces_all_entities():
     assert trial["has_results_flag"] is True
     assert trial["record_quality_flag"] == "ok"
     assert trial["source_json_hash"]
+    assert trial["indication_profile"] == "adrd"
+
+
+def test_flatten_study_stamps_explicit_indication_profile():
+    rows = flatten_study(
+        FIXTURE_STUDY,
+        "run1",
+        "2026-07-24T00:00:00+00:00",
+        TAXONOMY,
+        GEOGRAPHY,
+        indication_profile="oncology_nsclc",
+    )
+    assert rows["silver_trials"][0]["indication_profile"] == "oncology_nsclc"
 
     assert len(rows["silver_trial_conditions"]) == 2
     groups = {r["condition_group"] for r in rows["silver_trial_conditions"]}

@@ -23,6 +23,7 @@ class IngestionManifest(BaseModel):
     query_hash: str
     endpoint: str
     condition: str | None = None
+    indication_profile: str | None = None
     params: dict[str, str]
     mode: str = "incremental"
     profile: str = "default"  # which ingestion profile produced this run (e.g. "full-catalog")
