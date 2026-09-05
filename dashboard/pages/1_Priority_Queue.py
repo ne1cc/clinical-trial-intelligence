@@ -13,6 +13,15 @@ data.require_warehouse()
 queue = data.priority_queue()
 filtered = segment_filters(queue)
 
+band_options = ["priority_review", "review", "watch"]
+selected_bands = st.sidebar.multiselect("Priority band", band_options)
+if selected_bands:
+    pre_band_count = len(filtered)
+    filtered = filtered[filtered["priority_band"].isin(selected_bands)]
+    st.sidebar.caption(
+        f"{len(filtered):,} of {pre_band_count:,} rows shown after priority band filter"
+    )
+
 band_counts = filtered["priority_band"].value_counts()
 col1, col2, col3 = st.columns(3)
 col1.metric("Priority review", int(band_counts.get("priority_review", 0)))
@@ -46,6 +55,34 @@ queue_event = st.dataframe(
     width="stretch",
     on_select="rerun",
     selection_mode="single-row",
+)
+
+export_columns = [
+    "priority_rank",
+    "condition_group",
+    "state_normalized",
+    "phase_normalized",
+    "feasibility_review_priority_score",
+    "priority_band",
+    "recruiting_trial_count",
+    "sponsor_hhi",
+    "site_overlap_share",
+    "data_confidence_share",
+    "normalized_recruiting_trial_count",
+    "normalized_recent_recruiting_growth",
+    "normalized_sponsor_concentration",
+    "normalized_site_overlap",
+    "normalized_data_confidence_adjustment",
+    "priority_explanation",
+    "interpretation_note",
+]
+st.download_button(
+    "Download filtered queue as CSV",
+    filtered[export_columns].to_csv(index=False).encode("utf-8"),
+    file_name="feasibility_priority_queue.csv",
+    mime="text/csv",
+    help="Exports exactly the rows and filters currently shown above, "
+    "including the interpretation note on every row.",
 )
 
 selected_rows = queue_event.selection.rows if queue_event.selection else []
