@@ -52,7 +52,7 @@ The existing analytical foundation is already strong:
 |---|---|---|
 | Ingestion | ClinicalTrials.gov API ingestion using `requests`, after resolving an API edge-protection issue with `httpx` | Shows real-world source reliability troubleshooting and robust client design |
 | Warehouse | DuckDB with Bronze → Silver → Gold/dbt structure | Gives reproducibility, fast local analytics, and transparent transformations |
-| Quality | 73 dbt tests and a pytest suite in the latest pipeline run | Signals production-minded data quality and test discipline |
+| Quality | 114 dbt tests and a pytest suite in the latest pipeline run | Signals production-minded data quality and test discipline |
 | History | Weekly snapshot history through `fct_trial_snapshot` | Enables time-series and change-detection features, far more valuable than static registry search |
 | Intelligence marts | Trial activity, recruiting competition, site overlap, geography trends, data reliability, feasibility priority queue | Covers the baseline feasibility workflow |
 | User experience | Priority Queue, Competition Landscape, Geography Trends, Site Overlap, Sponsor Landscape, Data Reliability, Trial Explorer | A coherent decision journey rather than disconnected charts |
