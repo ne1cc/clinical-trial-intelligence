@@ -1,12 +1,16 @@
 import os
 import sys
+from typing import TYPE_CHECKING
 
 from loguru import logger
+
+if TYPE_CHECKING:
+    from loguru import Logger
 
 _CONFIGURED = False
 
 
-def setup_logging():
+def setup_logging() -> "Logger":
     """Configure the shared loguru logger once. Level comes from CTI_LOG_LEVEL (default INFO)."""
     global _CONFIGURED
     if not _CONFIGURED:

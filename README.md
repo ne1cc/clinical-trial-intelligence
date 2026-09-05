@@ -139,6 +139,26 @@ make dbt-test
 make quality-report
 ```
 
+## 14a. How to run the orchestrator locally
+
+```bash
+make dbt-deps                     # one-time: dbt packages
+uv run dbt parse --project-dir dbt_clinical_trials --profiles-dir dbt_clinical_trials
+uv run dagster dev -m src.orchestration.definitions
+```
+
+`dagster dev` opens the web UI at http://localhost:3000 showing the bronze→silver→gold
+asset graph. Materialize assets manually from the UI, or execute the weekly job
+headlessly:
+
+```bash
+uv run dagster job execute -m src.orchestration.definitions -j weekly_refresh
+```
+
+Headless execution hits the real ClinicalTrials.gov API; local `dagster dev` is for
+inspection, manual materializations, and ad-hoc re-runs (backfills are deliberately
+not part of the design).
+
 ## 15. How to start the Streamlit dashboard
 
 ```bash

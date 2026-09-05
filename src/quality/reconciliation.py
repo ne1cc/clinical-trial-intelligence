@@ -2,6 +2,11 @@
 
 Every complete (success) run must carry the same trial count through each
 layer. Failures are reported, never silently corrected.
+
+The checks are split by layer dependency: `bronze_silver_checks` needs only
+bronze manifests and silver Parquet (usable before dbt builds the warehouse),
+while `warehouse_checks` needs the DuckDB warehouse dbt produces. The public
+composer `run_reconciliation` returns both.
 """
 
 from __future__ import annotations
@@ -13,7 +18,7 @@ import duckdb
 from loguru import logger
 
 from src.config import ProjectConfig, get_config
-from src.ingest.snapshot_manifest import load_manifests
+from src.ingest.snapshot_manifest import IngestionManifest, load_manifests
 
 
 @dataclass
@@ -33,14 +38,21 @@ def _silver_trial_stats(cfg: ProjectConfig, run_id: str) -> tuple[int, int] | No
     row = duckdb.sql(
         f"select count(*), count(distinct nct_id) from read_parquet('{path.as_posix()}')"
     ).fetchone()
+    assert row is not None
     return int(row[0]), int(row[1])
 
 
-def run_reconciliation(cfg: ProjectConfig | None = None) -> list[ReconciliationCheck]:
+def _success_runs(cfg: ProjectConfig) -> list[IngestionManifest]:
+    return [m for m in load_manifests(cfg.paths.bronze_manifests) if m.status == "success"]
+
+
+def bronze_silver_checks(cfg: ProjectConfig | None = None) -> list[ReconciliationCheck]:
+    """Bronze manifests vs silver Parquet. No warehouse dependency — safe to run
+    as the pre-dbt gate on silver_entities."""
     cfg = cfg or get_config()
     checks: list[ReconciliationCheck] = []
 
-    success_runs = [m for m in load_manifests(cfg.paths.bronze_manifests) if m.status == "success"]
+    success_runs = _success_runs(cfg)
     if not success_runs:
         checks.append(
             ReconciliationCheck(
@@ -52,6 +64,7 @@ def run_reconciliation(cfg: ProjectConfig | None = None) -> list[ReconciliationC
                 note="No complete ingestion runs found.",
             )
         )
+        _log_failures("Bronze→silver", checks)
         return checks
 
     for manifest in success_runs:
@@ -88,41 +101,18 @@ def run_reconciliation(cfg: ProjectConfig | None = None) -> list[ReconciliationC
             )
         )
 
-    latest = max(success_runs, key=lambda m: m.ingestion_run_id)
+    _log_failures("Bronze→silver", checks)
+    return checks
+
+
+def warehouse_checks(cfg: ProjectConfig | None = None) -> list[ReconciliationCheck]:
+    """DuckDB warehouse vs latest silver. Requires the warehouse dbt builds —
+    run as post-build validation on dim_trial, not before dbt."""
+    cfg = cfg or get_config()
+    checks: list[ReconciliationCheck] = []
+
     warehouse = cfg.paths.duckdb
-    if warehouse.exists():
-        con = duckdb.connect(str(warehouse), read_only=True)
-        try:
-            dim_trial_count = con.execute("select count(*) from main_marts.dim_trial").fetchone()[0]
-            latest_stats = _silver_trial_stats(cfg, latest.ingestion_run_id)
-            expected_trials = latest_stats[1] if latest_stats else None
-            checks.append(
-                ReconciliationCheck(
-                    check="warehouse_dim_trial_vs_latest_silver",
-                    run_id=latest.ingestion_run_id,
-                    expected=expected_trials,
-                    actual=dim_trial_count,
-                    passed=expected_trials == dim_trial_count,
-                    note="dim_trial holds one row per NCT ID seen in any snapshot;"
-                    " equality holds while snapshots share one query scope.",
-                )
-            )
-            current_flags = con.execute(
-                "select count(*) from main_marts.fct_trial_snapshot where current_record_flag"
-            ).fetchone()[0]
-            checks.append(
-                ReconciliationCheck(
-                    check="warehouse_one_current_record_per_trial",
-                    run_id=None,
-                    expected=dim_trial_count,
-                    actual=current_flags,
-                    passed=current_flags <= dim_trial_count,
-                    note="Current records cannot exceed known trials.",
-                )
-            )
-        finally:
-            con.close()
-    else:
+    if not warehouse.exists():
         checks.append(
             ReconciliationCheck(
                 check="warehouse_exists",
@@ -133,11 +123,62 @@ def run_reconciliation(cfg: ProjectConfig | None = None) -> list[ReconciliationC
                 note="Run `make dbt-run`.",
             )
         )
+        _log_failures("Warehouse", checks)
+        return checks
 
+    con = duckdb.connect(str(warehouse), read_only=True)
+    try:
+        row = con.execute("select count(*) from main_marts.dim_trial").fetchone()
+        assert row is not None
+        dim_trial_count = row[0]
+        success_runs = _success_runs(cfg)
+        latest = max(success_runs, key=lambda m: m.ingestion_run_id) if success_runs else None
+        latest_stats = _silver_trial_stats(cfg, latest.ingestion_run_id) if latest else None
+        expected_trials = latest_stats[1] if latest_stats else None
+        checks.append(
+            ReconciliationCheck(
+                check="warehouse_dim_trial_vs_latest_silver",
+                run_id=latest.ingestion_run_id if latest else None,
+                expected=expected_trials,
+                actual=dim_trial_count,
+                passed=expected_trials == dim_trial_count,
+                note="dim_trial holds one row per NCT ID seen in any snapshot;"
+                " equality holds while snapshots share one query scope.",
+            )
+        )
+        flag_row = con.execute(
+            "select count(*) from main_marts.fct_trial_snapshot where current_record_flag"
+        ).fetchone()
+        assert flag_row is not None
+        current_flags = flag_row[0]
+        checks.append(
+            ReconciliationCheck(
+                check="warehouse_one_current_record_per_trial",
+                run_id=None,
+                expected=dim_trial_count,
+                actual=current_flags,
+                passed=current_flags <= dim_trial_count,
+                note="Current records cannot exceed known trials.",
+            )
+        )
+    finally:
+        con.close()
+
+    _log_failures("Warehouse", checks)
+    return checks
+
+
+def _log_failures(layer: str, checks: list[ReconciliationCheck]) -> None:
+    for check in (c for c in checks if not c.passed):
+        logger.warning("{} reconciliation FAILED: {}", layer, asdict(check))
+
+
+def run_reconciliation(cfg: ProjectConfig | None = None) -> list[ReconciliationCheck]:
+    """All cross-layer checks: bronze→silver plus warehouse (public API)."""
+    checks = bronze_silver_checks(cfg) + warehouse_checks(cfg)
     failed = [c for c in checks if not c.passed]
     if failed:
-        for check in failed:
-            logger.warning("Reconciliation FAILED: {}", asdict(check))
+        logger.warning("Reconciliation: {} of {} checks FAILED.", len(failed), len(checks))
     else:
         logger.info("All {} reconciliation checks passed.", len(checks))
     return checks

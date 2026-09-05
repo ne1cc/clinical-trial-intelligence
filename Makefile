@@ -65,8 +65,10 @@ pipeline: ingest transform dbt-run dbt-test quality-report ## Full end-to-end re
 test: ## Run Python unit tests
 	uv run pytest
 
-lint: ## Lint Python code
+lint: ## Lint and type-check Python code
 	uv run ruff check src tests dashboard
+	uv run ruff format --check src tests dashboard
+	uv run mypy
 
 format: ## Auto-format Python code
 	uv run ruff format src tests dashboard
