@@ -502,6 +502,13 @@ logic) rather than forking an ingestion path:
 - `src/ingest/extract_studies.py` — new `profile` parameter threaded
   into the manifest; `cfg = config or get_config()` already covered the
   config-override need.
+- `src/ingest/extract_studies.py` (guard, follow-up in the same phase) —
+  `run_ingestion` raises `ValueError` before any HTTP session or
+  directory creation when `profile="full-catalog"` is combined with a
+  condition filter; the CLI's existing exception handling turns this
+  into a logged error and exit code 1. Condition handling mirrors
+  `CTGClient.build_params` (`if condition:`), so an empty string is
+  treated as "no condition".
 - `src/ingest/snapshot_manifest.py` — `profile: str = "default"` field.
 - `Makefile` — `ingest-full-catalog` and `full-catalog-full-refresh`
   targets; `setup` also creates the full-catalog bronze directories.
@@ -522,6 +529,11 @@ logic) rather than forking an ingestion path:
 - `tests/test_ctg_client.py` — with empty `query_params`, `build_params`
   emits no `query.cond`/`filter.overallStatus`/`filter.advanced` keys.
 - `tests/test_snapshot_manifest.py` — `profile` defaults and overrides.
+- `tests/test_extract_studies.py` (new) — guard fires for full-catalog +
+  condition; default profile + condition still proceeds past the guard
+  (verified with a sentinel client, so tests never touch the network).
+- `tests/test_cli.py` — combining `--condition` with `--profile
+  full-catalog` exits 1 and never enters `CTGClient`.
 
 ### Step 8.4 — Documentation
 
@@ -538,7 +550,7 @@ logic) rather than forking an ingestion path:
 
 | Check | Command | Result |
 |---|---|---|
-| Unit tests | `uv run pytest -q -rs` | 61 passed, 8 skipped |
+| Unit tests | `uv run pytest -q -rs` | 64 passed, 8 skipped |
 | Lint | `make lint` (ruff on src/tests/dashboard) | clean |
 
 The 8 skips are `tests/test_dashboard_smoke.py` marts-not-built skips —
@@ -557,15 +569,14 @@ to this change.
 
 ### Known limitations and open questions
 
-- No CLI guard against combining `--condition` with `--profile
-  full-catalog`; the Makefile targets never do this, but a direct CLI
-  call could produce a run labeled `full-catalog` that is actually
-  condition-filtered. Flagged as an open question (small validation in
-  `cli.py` or `run_ingestion` would close it).
+- Resolved (same phase): combining `--condition` with `--profile
+  full-catalog` is now rejected by `run_ingestion` with a `ValueError`
+  before any HTTP activity or files are written; the CLI exits 1. See
+  the guard bullet in Step 8.2 and the new tests in Step 8.3.
 - Full-catalog data reaches nothing downstream yet by design; the
   profile is inert until the chunked transform phase.
-- `config/full_catalog_config.yml` is currently untracked and must be
-  included in the Phase 8 commit.
+- `config/full_catalog_config.yml` was untracked at implementation time
+  and is included in the Phase 8 commit (`f422c0c`).
 
 ### Next step
 

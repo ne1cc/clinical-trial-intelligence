@@ -36,6 +36,12 @@ def run_ingestion(
     config: ProjectConfig | None = None,
 ) -> IngestionManifest:
     log = setup_logging()
+    if profile == "full-catalog" and condition:
+        raise ValueError(
+            "The full-catalog profile snapshots all conditions worldwide and "
+            f"cannot be combined with a condition filter (got {condition!r}); "
+            "use the default profile for condition-scoped ingestion."
+        )
     cfg = config or get_config()
     manifests_dir = cfg.paths.bronze_manifests
 

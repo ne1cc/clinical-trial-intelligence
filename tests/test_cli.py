@@ -63,6 +63,28 @@ def test_cli_main_ingest_default_profile_passes_no_config_override(monkeypatch):
     assert captured["config"] is None
 
 
+def test_cli_main_rejects_condition_with_full_catalog_profile(monkeypatch):
+    entered = []
+
+    class NoNetworkClient:
+        def __init__(self, api):
+            pass
+
+        def __enter__(self):
+            entered.append(True)
+            raise RuntimeError("network guard: client should never be entered")
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr("src.ingest.extract_studies.CTGClient", NoNetworkClient)
+
+    exit_code = main(["ingest", "--profile", "full-catalog", "--condition", "Cancer"])
+
+    assert exit_code == 1
+    assert not entered
+
+
 def test_cli_parser_transform():
     parser = build_parser()
     args = parser.parse_args(["transform", "--run-id", "2026-09-04", "--force"])

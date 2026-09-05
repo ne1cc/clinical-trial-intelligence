@@ -83,7 +83,9 @@ An opt-in, additive ingestion profile snapshots the **entire** ClinicalTrials.go
 registry — all conditions, worldwide, no status/type filter (~600k+ studies as of
 this writing). Run it with `make ingest-full-catalog`. It writes to a completely
 separate bronze tree (`data/bronze_full_catalog/`, `config/full_catalog_config.yml`)
-and cannot interfere with the default ADRD/US pipeline above.
+and cannot interfere with the default ADRD/US pipeline above. Combining
+`--condition` with this profile is rejected: the profile's scope is all
+conditions by definition.
 
 **Bronze only — not yet reflected in silver, gold, dbt marts, or the dashboard.**
 It's the first step toward scaling this project beyond a single therapeutic area;
