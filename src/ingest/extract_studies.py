@@ -66,6 +66,17 @@ def run_ingestion(
     else:
         cfg = get_config()
 
+    if condition is not None:
+        # Reject explicit-but-empty input instead of silently ignoring it (or
+        # worse, sending a whitespace filter to the API), and strip stray
+        # padding so query_hash reuse treats " X " and "X" as the same query.
+        condition = condition.strip()
+        if not condition:
+            raise ValueError(
+                "condition was passed but is empty or whitespace-only; omit "
+                "--condition or provide a condition name."
+            )
+
     if profile in ("full-catalog", "full_catalog") and condition:
         raise ValueError(
             f"The {profile} profile snapshots all conditions worldwide and "
