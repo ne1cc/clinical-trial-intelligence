@@ -177,3 +177,64 @@ models:
       - name: weighted_data_confidence_adjustment
         description: weight_data_confidence_adjustment * normalized_data_confidence_adjustment.
         tests: [not_null]
+
+  - name: mart_trial_similarity
+    description: >
+      Deterministic trial-pair comparability -- a structural/design
+      signal, not clinical equivalence and not itself a competition
+      signal. One row per (nct_id_a, nct_id_b) pair, nct_id_a's top 25
+      matches only.
+    columns:
+      - name: trial_similarity_key
+        tests: [not_null, unique]
+      - name: nct_id_a
+        tests: [not_null]
+      - name: nct_id_b
+        tests: [not_null]
+      - name: similarity_score
+        tests: [not_null]
+      - name: similarity_rank
+        tests: [not_null]
+      - name: same_condition
+        tests: [not_null]
+      - name: weight_same_condition
+        tests: [not_null]
+      - name: weighted_same_condition
+        tests: [not_null]
+      - name: same_phase
+        tests: [not_null]
+      - name: weight_same_phase
+        tests: [not_null]
+      - name: weighted_same_phase
+        tests: [not_null]
+      - name: geography_overlap
+        tests: [not_null]
+      - name: weight_geography_overlap
+        tests: [not_null]
+      - name: weighted_geography_overlap
+        tests: [not_null]
+      - name: intervention_type_overlap
+        tests: [not_null]
+      - name: weight_intervention_type_overlap
+        tests: [not_null]
+      - name: weighted_intervention_type_overlap
+        tests: [not_null]
+      - name: study_design_match
+        tests: [not_null]
+      - name: weight_study_design_match
+        tests: [not_null]
+      - name: weighted_study_design_match
+        tests: [not_null]
+      - name: eligibility_compatible
+        tests: [not_null]
+      - name: weight_eligibility_compatible
+        tests: [not_null]
+      - name: weighted_eligibility_compatible
+        tests: [not_null]
+      - name: enrollment_band_match
+        tests: [not_null]
+      - name: weight_enrollment_band_match
+        tests: [not_null]
+      - name: weighted_enrollment_band_match
+        tests: [not_null]
+      - name: similarity_explanation

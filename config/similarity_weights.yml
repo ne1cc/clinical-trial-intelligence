@@ -1,0 +1,21 @@
+# Trial Similarity Explorer score configuration.
+# Deterministic comparability signal between two trials -- NOT a claim
+# of clinical equivalence, and NOT itself a competition/recruitment
+# signal (two trials can be highly comparable in design while
+# recruiting in entirely different places).
+#
+# Must stay consistent with dbt seed similarity_score_weights.csv
+# (tests/test_similarity.py enforces this).
+
+similarity:
+  # Each factor is a deterministic 0/1 match (not min-max normalized --
+  # pairwise comparability is inherently "same or different," unlike
+  # the feasibility score's continuous inputs). Weights must sum to 1.0.
+  weights:
+    same_condition: 0.15
+    same_phase: 0.20
+    geography_overlap: 0.15
+    intervention_type_overlap: 0.15
+    study_design_match: 0.15
+    eligibility_compatible: 0.10
+    enrollment_band_match: 0.10
