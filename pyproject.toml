@@ -10,8 +10,10 @@ dependencies = [
     "requests>=2.32",
     "tenacity>=8.3",
     "pydantic>=2.7",
-    "pandas>=2.2",
-    "pyarrow>=16.0",
+    "pandas>=2.2,<3",
+    # pyarrow 25 segfaults in its threaded pandas->Arrow conversion
+    # (pa.array in pandas_compat.convert_column) under Streamlit load.
+    "pyarrow>=16.0,<22",
     "duckdb>=1.0",
     "python-dotenv>=1.0",
     "loguru>=0.7",

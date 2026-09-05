@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from components.scroll_fix import apply_table_scroll_fix
+
 DISCLAIMER = (
     "**Planning signal only.** All figures are derived from public "
     "ClinicalTrials.gov registry listings. They represent *potential "
@@ -21,6 +23,7 @@ PROXY_NOTE = (
 
 def page_setup(title: str, icon: str = ":material/monitor_heart:") -> None:
     st.set_page_config(page_title=title, page_icon=icon, layout="wide")
+    apply_table_scroll_fix()
     st.title(title)
     st.info(DISCLAIMER)
 
