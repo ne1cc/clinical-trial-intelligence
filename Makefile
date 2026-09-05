@@ -9,7 +9,7 @@ CONDITION   ?= Alzheimer Disease
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup env ingest full-refresh transform dbt-deps dbt-run dbt-test \
+.PHONY: help setup env ingest full-refresh transform dbt-deps dbt-seed dbt-run dbt-test \
         dbt-docs quality-report dashboard test lint format clean pipeline
 
 help: ## Show available commands
@@ -34,7 +34,10 @@ transform: ## Flatten bronze JSON into silver Parquet entities (Phase 3)
 dbt-deps: ## Install dbt packages (Phase 4)
 	$(DBT) deps $(DBT_FLAGS)
 
-dbt-run: ## Build staging, intermediate, and mart models (Phase 4)
+dbt-seed: ## Load dbt seeds: score weights, phase/status mappings (Phase 4)
+	$(DBT) seed $(DBT_FLAGS)
+
+dbt-run: dbt-seed ## Build staging, intermediate, and mart models (Phase 4)
 	$(DBT) run $(DBT_FLAGS)
 
 dbt-test: ## Run dbt data tests (Phase 4)
