@@ -58,13 +58,15 @@ nothing to pass via `fly secrets set`.
   `pipeline succeeded` (2026-09-05T02:35:56Z → 02:36:55Z), which includes a
   real 27-page download from ClinicalTrials.gov.
 - **Every 7 days**, the entrypoint pauses the dashboard, reruns the pipeline,
-  and resumes serving. The outage is exactly as long as a pipeline run: 19
-  seconds measured locally on 2026-09-05 over a reused ingestion run
-  (3,037 trials, 32 dbt models, 115 dbt tests — counts as of that date, they
-  drift with the catalogue and with `dbt_clinical_trials/models/`). It has to
-  pause: DuckDB takes one writer *or* readers, and the dashboard caches its
-  read-only connection for the life of the process. While paused, Fly's proxy
-  stops routing to the machine, but nothing restarts: the machine's
+  and resumes serving. Budget the outage as one pipeline run plus Streamlit's
+  startup: 50 seconds, measured on 2026-09-05 in this image itself (Docker,
+  linux/arm64, shared CPU) over a reused ingestion run — 3,037 trials, 32 dbt
+  models, 115 dbt tests, counts that drift with the catalogue and with
+  `dbt_clinical_trials/models/`. The same run finished in 19 seconds on an
+  unloaded desktop, so treat 50s as the figure that matters and not a floor.
+  It has to pause: DuckDB takes one writer *or* readers, and the dashboard
+  caches its read-only connection for the life of the process. While paused,
+  Fly's proxy stops routing to the machine, but nothing restarts: the machine's
   `restart` policy is `on-failure`, which keys off the entrypoint process's
   exit code, and the supervisor stays PID 1 through the whole refresh.
   Output is appended to `/app/data/logs/pipeline.log` on the volume, and every
