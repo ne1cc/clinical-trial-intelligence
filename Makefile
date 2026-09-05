@@ -9,7 +9,8 @@ CONDITION   ?= Alzheimer Disease
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup env ingest full-refresh transform dbt-deps dbt-seed dbt-run dbt-test \
+.PHONY: help setup env ingest full-refresh ingest-full-catalog full-catalog-full-refresh \
+        transform dbt-deps dbt-seed dbt-run dbt-test \
         dbt-docs quality-report dashboard test lint format clean pipeline
 
 help: ## Show available commands
@@ -20,6 +21,7 @@ setup: ## Install dependencies and prepare local environment
 	@test -f .env || cp .env.example .env
 	@test -f $(DBT_DIR)/profiles.yml || { test -f $(DBT_DIR)/profiles.yml.example && cp $(DBT_DIR)/profiles.yml.example $(DBT_DIR)/profiles.yml || true; }
 	@mkdir -p data/bronze/api_responses data/bronze/manifests data/silver data/gold data/warehouse
+	@mkdir -p data/bronze_full_catalog/api_responses data/bronze_full_catalog/manifests
 	@echo "Setup complete. Edit .env if needed, then run: make ingest"
 
 ingest: ## Run an incremental ingestion snapshot from ClinicalTrials.gov (Phase 2)
@@ -27,6 +29,12 @@ ingest: ## Run an incremental ingestion snapshot from ClinicalTrials.gov (Phase 
 
 full-refresh: ## Re-ingest all pages ignoring incremental state (Phase 2)
 	$(PYTHON) -m src.cli ingest --condition "$(CONDITION)" --full-refresh
+
+ingest-full-catalog: ## Opt-in: snapshot the full ClinicalTrials.gov registry, all conditions worldwide (bronze only)
+	$(PYTHON) -m src.cli ingest --profile full-catalog
+
+full-catalog-full-refresh: ## Opt-in: force a full re-pull of the full-catalog profile
+	$(PYTHON) -m src.cli ingest --profile full-catalog --full-refresh
 
 transform: ## Flatten bronze JSON into silver Parquet entities (Phase 3)
 	$(PYTHON) -m src.cli transform
