@@ -2,7 +2,7 @@
 
 import argparse
 
-from src.profiles import get_registry
+from src.profiles import IndicationProfile, get_registry
 from src.utils.logging import setup_logging
 
 # Legacy profile name aliases kept for backward compatibility.
@@ -14,6 +14,14 @@ _PROFILE_ALIASES: dict[str, str] = {
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser with all pipeline subcommands.
+
+    Configures argument definitions and flags for the four core subcommands:
+    ``ingest``, ``transform``, ``quality-report``, and ``orchestrate``.
+
+    Returns:
+        argparse.ArgumentParser: Configured argument parser for the pipeline CLI.
+    """
     parser = argparse.ArgumentParser(
         prog="python -m src.cli",
         description=(
@@ -67,11 +75,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     transform.add_argument(
         "--profile",
-        choices=["default", "full-catalog"],
         default="default",
-        help="Scope profile to transform. 'full-catalog' reads data/bronze_full_catalog "
-        "and writes data/silver_full_catalog; it is additive and does not affect the "
-        "default ADRD/US pipeline.",
+        help=(
+            "Indication profile ID from config/profiles/ "
+            "(e.g. 'adrd', 'oncology_nsclc', 'full_catalog'). "
+            "Legacy aliases 'default' → adrd and 'full-catalog' → full_catalog are accepted. "
+            "'full_catalog' reads data/bronze/full_catalog and writes data/silver_full_catalog."
+        ),
     )
 
     quality = subparsers.add_parser(
@@ -93,6 +103,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     orchestrate.add_argument(
+        "--profile",
+        default=None,
+        help="Optional profile ID to orchestrate just one profile (default: all active profiles).",
+    )
+    orchestrate.add_argument(
         "--full-refresh",
         action="store_true",
         help="Force new ingestion snapshots for all profiles, ignoring incremental state.",
@@ -108,8 +123,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Execute the pipeline CLI command specified by command-line arguments.
+
+    Dispatches to the appropriate pipeline subroutines for ingestion, transformation,
+    data quality reporting, or multi-profile orchestration based on parsed arguments.
+
+    Args:
+        argv: Command-line argument vector to parse. If None, arguments are read
+            from sys.argv.
+
+    Returns:
+        int: Exit code (0 for success, non-zero for errors or failed runs).
+
+    Raises:
+        SystemExit: When invalid CLI arguments are provided to the parser.
+    """
     args = build_parser().parse_args(argv)
     log = setup_logging()
+    indication_profile: IndicationProfile | None = None
 
     if args.command == "ingest":
         from src.ingest.extract_studies import run_ingestion
@@ -137,15 +168,32 @@ def main(argv: list[str] | None = None) -> int:
         from src.quality.profiling import profile_run
         from src.transform.build_silver_entities import run_transform
 
+        raw_profile = args.profile
+        profile_id = _PROFILE_ALIASES.get(raw_profile, raw_profile)
+
         try:
-            config = (
-                load_config("config/full_catalog_config.yml")
-                if args.profile == "full-catalog"
-                else None
+            if profile_id == "full_catalog":
+                config = load_config("config/full_catalog_config.yml")
+                profile_cfg = config
+            elif raw_profile == "default":
+                config = None
+                registry = get_registry()
+                indication_profile = registry.get("adrd")
+                profile_cfg = None
+            else:
+                registry = get_registry()
+                indication_profile = registry.get(profile_id)
+                config = None
+                profile_cfg = indication_profile.config
+
+            processed = run_transform(
+                run_id=args.run_id,
+                force=args.force,
+                config=config,
+                profile=indication_profile,
             )
-            processed = run_transform(run_id=args.run_id, force=args.force, config=config)
             for run_id in processed:
-                profile_run(run_id, config=config)
+                profile_run(run_id, config=profile_cfg)
         except Exception as exc:
             log.error("Transform failed: {}", exc)
             return 1
@@ -178,7 +226,12 @@ def main(argv: list[str] | None = None) -> int:
         from src.transform.build_silver_entities import run_transform
 
         registry = get_registry()
-        profiles = registry.active()
+        if args.profile:
+            raw_profile = args.profile
+            profile_id = _PROFILE_ALIASES.get(raw_profile, raw_profile)
+            profiles = [registry.get(profile_id)]
+        else:
+            profiles = registry.active()
         log.info("Orchestrating {} profile(s): {}", len(profiles), [p.profile_id for p in profiles])
 
         failed: list[str] = []

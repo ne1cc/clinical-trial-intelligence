@@ -1,5 +1,7 @@
 """Trial Similarity Explorer — deterministic protocol comparability."""
 
+from typing import Any
+
 import pandas as pd
 import streamlit as st
 from components import data
@@ -27,6 +29,17 @@ st.info(
 )
 
 trials = data.trial_explorer()
+
+# Indication filter when multiple profiles exist in warehouse
+indications = data.get_indication_profiles()
+if len(indications) > 1:
+    ind_names = ["All indications"] + [i["display_name"] for i in indications]
+    ind_id_by_name = {i["display_name"]: i["id"] for i in indications}
+    sel_ind_name = st.selectbox("Filter by indication", ind_names)
+    if sel_ind_name != "All indications":
+        sel_pid = ind_id_by_name[sel_ind_name]
+        trials = trials[trials["indication_profile_id"] == sel_pid]
+
 search = st.text_input("Search for an index trial by NCT ID or title")
 
 candidates = trials
@@ -41,16 +54,39 @@ if candidates.empty:
     st.warning("No trials match that search.")
     st.stop()
 
-options = {
-    f"{row.nct_id} — {row.brief_title}": row.nct_id for row in candidates.head(50).itertuples()
-}
+
+def _format_option(row: Any) -> str:
+    """Format a candidate trial row into a human-readable dropdown selection label.
+
+    Args:
+        row: Namedtuple row from candidate trials containing ``nct_id``, ``brief_title``,
+            and optional ``indication_profile_id``.
+
+    Returns:
+        str: Label formatted as ``{nct_id} — {brief_title} [{indication_profile_id}]``.
+    """
+    ind_tag = (
+        f" [{row.indication_profile_id}]"
+        if len(indications) > 1
+        and hasattr(row, "indication_profile_id")
+        and row.indication_profile_id
+        else ""
+    )
+    return f"{row.nct_id} — {row.brief_title}{ind_tag}"
+
+
+options = {_format_option(row): row.nct_id for row in candidates.head(50).itertuples()}
 selected_label = st.selectbox("Select the index trial", list(options))
 selected_nct_id = options[selected_label]
+
+merge_cols = ["nct_id", "brief_title", "registry_url"]
+if "indication_profile_id" in trials.columns:
+    merge_cols.append("indication_profile_id")
 
 matches = (
     data.trial_similarity(selected_nct_id)
     .merge(
-        trials[["nct_id", "brief_title", "registry_url"]],
+        trials[merge_cols],
         left_on="nct_id_b",
         right_on="nct_id",
         how="left",
@@ -68,25 +104,36 @@ st.caption("Click a row to see its full factor breakdown below.")
 match_columns = [
     "similarity_rank",
     "nct_id_b",
-    "brief_title",
-    "registry_url",
-    "similarity_score",
-    "similarity_explanation",
 ]
+if len(indications) > 1 and "indication_profile_id" in matches.columns:
+    match_columns.append("indication_profile_id")
+match_columns.extend(
+    [
+        "brief_title",
+        "registry_url",
+        "similarity_score",
+        "similarity_explanation",
+    ]
+)
+
+col_cfg: dict = {
+    "nct_id_b": st.column_config.TextColumn("NCT ID"),
+    "brief_title": st.column_config.TextColumn("Brief title", width="large"),
+    "registry_url": st.column_config.LinkColumn(
+        "Registry record",
+        help="Opens the public ClinicalTrials.gov record",
+        display_text="View on ClinicalTrials.gov",
+    ),
+    "similarity_score": st.column_config.NumberColumn(format="%.4f"),
+}
+if "indication_profile_id" in match_columns:
+    col_cfg["indication_profile_id"] = st.column_config.TextColumn("Indication")
+
 match_event = st.dataframe(
     matches[match_columns],
     hide_index=True,
     width="stretch",
-    column_config={
-        "nct_id_b": st.column_config.TextColumn("NCT ID"),
-        "brief_title": st.column_config.TextColumn("Brief title", width="large"),
-        "registry_url": st.column_config.LinkColumn(
-            "Registry record",
-            help="Opens the public ClinicalTrials.gov record",
-            display_text="View on ClinicalTrials.gov",
-        ),
-        "similarity_score": st.column_config.NumberColumn(format="%.4f"),
-    },
+    column_config=col_cfg,
     on_select="rerun",
     selection_mode="single-row",
 )

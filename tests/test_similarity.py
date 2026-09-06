@@ -27,3 +27,14 @@ def test_similarity_weights_sum_to_one():
 def test_yaml_weights_match_dbt_seed():
     yaml_weights = load_similarity_config()["similarity"]["weights"]
     assert yaml_weights == load_seed_weights()
+
+
+def test_similarity_models_reference_indication_profile_id():
+    int_path = ROOT / "dbt_clinical_trials/models/intermediate/int_trial_comparability_features.sql"
+    mart_path = ROOT / "dbt_clinical_trials/models/marts/mart_trial_similarity.sql"
+    int_sql = int_path.read_text()
+    mart_sql = mart_path.read_text()
+
+    assert "indication_profile_id" in int_sql
+    assert "indication_profile_id" in mart_sql
+    assert "a.indication_profile_id = b.indication_profile_id" in mart_sql

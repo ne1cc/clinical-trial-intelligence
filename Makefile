@@ -22,6 +22,7 @@ setup: ## Install dependencies and prepare local environment
 	@test -f .env || cp .env.example .env
 	@test -f $(DBT_DIR)/profiles.yml || { test -f $(DBT_DIR)/profiles.yml.example && cp $(DBT_DIR)/profiles.yml.example $(DBT_DIR)/profiles.yml || true; }
 	@mkdir -p data/bronze/adrd/api_responses data/bronze/adrd/manifests \
+	           data/bronze/oncology_nsclc/api_responses data/bronze/oncology_nsclc/manifests \
 	           data/bronze/full_catalog/api_responses data/bronze/full_catalog/manifests \
 	           data/silver data/gold data/warehouse
 	@echo "Setup complete. Edit .env if needed, then run: make ingest"
@@ -31,6 +32,12 @@ ingest: ## Run an incremental ingestion snapshot from ClinicalTrials.gov (Phase 
 
 full-refresh: ## Re-ingest all pages ignoring incremental state (Phase 2)
 	$(PYTHON) -m src.cli ingest --condition "$(CONDITION)" --full-refresh
+
+ingest-nsclc: ## Snapshot Non-Small Cell Lung Cancer studies into bronze
+	$(PYTHON) -m src.cli ingest --profile oncology_nsclc
+
+transform-nsclc: ## Flatten bronze NSCLC runs into silver Parquet entities
+	$(PYTHON) -m src.cli transform --profile oncology_nsclc
 
 ingest-full-catalog: ## Opt-in: snapshot the full ClinicalTrials.gov registry, all conditions worldwide (bronze only)
 	$(PYTHON) -m src.cli ingest --profile full_catalog

@@ -256,3 +256,89 @@ def test_cli_parser_quality_report():
     args = parser.parse_args(["quality-report", "--update-schema-baseline"])
     assert args.command == "quality-report"
     assert args.update_schema_baseline is True
+
+
+def test_cli_parser_transform_profile_accepts_indication():
+    parser = build_parser()
+    args = parser.parse_args(["transform", "--profile", "oncology_nsclc"])
+    assert args.profile == "oncology_nsclc"
+
+
+def test_cli_parser_orchestrate_with_profile():
+    parser = build_parser()
+    args = parser.parse_args(["orchestrate", "--profile", "oncology_nsclc"])
+    assert args.profile == "oncology_nsclc"
+
+
+def test_cli_main_orchestrate_with_profile_runs_only_named_profile(monkeypatch):
+    ingested = []
+    transformed = []
+
+    class FakeManifest:
+        status = "success"
+        error = None
+
+    class FakeProfileA:
+        profile_id = "adrd"
+        ingest_only = False
+
+    class FakeProfileB:
+        profile_id = "oncology_nsclc"
+        ingest_only = False
+
+    class FakeRegistry:
+        def get(self, profile_id):
+            if profile_id == "oncology_nsclc":
+                return FakeProfileB()
+            return FakeProfileA()
+
+        def active(self):
+            return [FakeProfileA(), FakeProfileB()]
+
+    monkeypatch.setattr("src.cli.get_registry", lambda: FakeRegistry())
+    monkeypatch.setattr(
+        "src.ingest.extract_studies.run_ingestion",
+        lambda **kw: (ingested.append(kw["config"].profile_id), FakeManifest())[1],
+    )
+    monkeypatch.setattr(
+        "src.transform.build_silver_entities.run_transform",
+        lambda **kw: (transformed.append(kw["profile"].profile_id), ["r1"])[1],
+    )
+    monkeypatch.setattr("src.quality.profiling.profile_run", lambda *a, **k: {})
+
+    exit_code = main(["orchestrate", "--profile", "oncology_nsclc"])
+
+    assert exit_code == 0
+    assert ingested == ["oncology_nsclc"]
+    assert transformed == ["oncology_nsclc"]
+
+
+def test_cli_main_transform_custom_profile_passes_profile(monkeypatch):
+    transform_calls = []
+    profile_calls = []
+
+    class FakeProfile:
+        profile_id = "oncology_nsclc"
+        config = object()
+
+    class FakeRegistry:
+        def get(self, profile_id):
+            assert profile_id == "oncology_nsclc"
+            return FakeProfile()
+
+    monkeypatch.setattr("src.cli.get_registry", lambda: FakeRegistry())
+    monkeypatch.setattr(
+        "src.transform.build_silver_entities.run_transform",
+        lambda **kwargs: (transform_calls.append(kwargs), ["r1"])[1],
+    )
+    monkeypatch.setattr(
+        "src.quality.profiling.profile_run",
+        lambda run_id, **kwargs: (profile_calls.append({"run_id": run_id, **kwargs}), {})[1],
+    )
+
+    exit_code = main(["transform", "--profile", "oncology_nsclc"])
+
+    assert exit_code == 0
+    assert len(transform_calls) == 1
+    assert transform_calls[0]["profile"].profile_id == "oncology_nsclc"
+    assert profile_calls[0]["config"] is FakeProfile.config

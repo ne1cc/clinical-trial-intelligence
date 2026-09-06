@@ -629,6 +629,9 @@ models:
       - name: nct_id_b
         data_type: VARCHAR
         tests: [not_null]
+      - name: indication_profile_id
+        data_type: VARCHAR
+        tests: [not_null]
       - name: similarity_score
         data_type: DOUBLE
         tests: [not_null]

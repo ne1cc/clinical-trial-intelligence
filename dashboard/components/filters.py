@@ -12,7 +12,25 @@ def segment_filters(
     state_col: str = "state_normalized",
     phase_col: str = "phase_normalized",
 ) -> pd.DataFrame:
-    """Sidebar multiselects for condition group / state / phase."""
+    """Render Streamlit sidebar multiselect filters over segment DataFrame columns.
+
+    Dynamically inspects the input DataFrame for the specified condition group,
+    state, and phase columns, rendering sidebar widgets for columns present and
+    filtering the returned DataFrame according to user selections.
+
+    Args:
+        frame: Input DataFrame containing trial or site segment data.
+        condition_col: Column name representing condition grouping. Defaults to
+            "condition_group".
+        state_col: Column name representing normalized state codes. Defaults to
+            "state_normalized".
+        phase_col: Column name representing normalized trial phases. Defaults to
+            "phase_normalized".
+
+    Returns:
+        pd.DataFrame: Filtered subset of the input DataFrame matching all active
+            sidebar filter selections.
+    """
     st.sidebar.header("Filters")
     filtered = frame
 
