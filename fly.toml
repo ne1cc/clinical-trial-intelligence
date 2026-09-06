@@ -6,6 +6,13 @@
 app = 'cti-dashboard'
 primary_region = 'iad'
 
+# The entrypoint traps SIGTERM but defers it until the current pipeline step
+# returns, so Fly's default 3s grace would kill a refresh caught by a deploy
+# mid-write. 90s covers the longest measured run (59s on a cold volume); an
+# idle supervisor still exits within its next 5s tick.
+kill_signal = 'SIGTERM'
+kill_timeout = '90s'
+
 [build]
 [[mounts]]
   source = 'cti_data'

@@ -69,13 +69,17 @@ scope:
     ClinicalTrials.gov returns only the current record per study. Longitudinal
     status history is constructed by this project from repeated weekly snapshots.
 
+# bronze_* mirror config/profiles/adrd.yml: `ingest --profile default` resolves
+# to the adrd profile and writes there, while transform and the quality readers
+# load this file. tests/test_profiles.py fails if the two stop agreeing, and
+# dbt's bronze source in _sources.yml repeats the manifests root as a literal.
 paths:
-  bronze_api_responses: data/bronze/api_responses
-  bronze_manifests: data/bronze/manifests
+  bronze_api_responses: data/bronze/adrd/api_responses
+  bronze_manifests: data/bronze/adrd/manifests
   silver: data/silver
   gold: data/gold
   duckdb: data/warehouse/clinical_trials.duckdb
-  quarantine: data/bronze/manifests/quarantine
+  quarantine: data/bronze/adrd/manifests/quarantine
 
 ingestion:
   mode_default: incremental           # skip re-download when a completed run
